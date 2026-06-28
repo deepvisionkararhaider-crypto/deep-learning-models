@@ -1,0 +1,21 @@
+Text,True_Label,Predicted_Label,True_Sentiment,Pred_Sentiment,Prob_Positive,Correct
+This movie was absolutely fantastic! The acting was superb....,1,1,Positive,Positive,0.9998724460601807,True
+Terrible film. Worst movie I have ever seen. Complete waste ...,0,0,Negative,Negative,0.00021606683731079102,True
+An amazing cinematic experience. Highly recommended!...,1,1,Positive,Positive,0.9998804330825806,True
+Boring and predictable. Nothing new here....,0,0,Negative,Negative,0.0002225041389465332,True
+The story is beautiful and the performances are outstanding....,1,1,Positive,Positive,0.9998776912689209,True
+I fell asleep watching this. Very dull and uninteresting....,0,0,Negative,Negative,0.00021845102310180664,True
+Great plot twists! Kept me on the edge of my seat....,1,1,Positive,Positive,0.9998592138290405,True
+"Poor acting, poor script, poor direction. Avoid....",0,0,Negative,Negative,0.00021022558212280273,True
+A masterpiece of storytelling. One of the best films this ye...,1,1,Positive,Positive,0.9998718500137329,True
+Completely disappointing. The trailer was much better than t...,0,0,Negative,Negative,0.014733314514160156,True
+Brilliant performances from all cast members. A must-watch!...,1,1,Positive,Positive,0.9998787641525269,True
+Overly long and tedious. Should have been 30 minutes shorter...,0,0,Negative,Negative,0.0002211928367614746,True
+Heartwarming and touching. Made me cry happy tears....,1,1,Positive,Positive,0.9998810291290283,True
+Nonsensical plot with zero character development....,0,0,Negative,Negative,0.0002104640007019043,True
+One of the most creative films in recent memory....,1,1,Positive,Positive,0.9998743534088135,True
+Cliche after cliche. Nothing original here....,0,0,Negative,Negative,0.0002098679542541504,True
+Genuinely moving story. Excellent production quality....,1,1,Positive,Positive,0.9998779296875,True
+Extremely slow pace. Struggles to maintain any interest....,0,0,Negative,Negative,0.0001952052116394043,True
+Perfect blend of humor and drama. Love every minute!...,1,1,Positive,Positive,0.9998905658721924,True
+Disappointing sequel. The original was far superior....,0,1,Negative,Positive,0.867072582244873,False
