@@ -9,6 +9,8 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+from yolo_page import render_yolo
+
 st.set_page_config(
     page_title="Deep Learning Models | Interactive Lab",
     page_icon="🧠",
@@ -34,6 +36,7 @@ MODELS = [
     (13, "DenseNet", "Image Classification", "CIFAR-10", "13_densenet", "Dense feature reuse through layer-to-layer connections."),
     (14, "ViT", "Image Classification", "CIFAR-10", "14_vit", "Image patches processed through transformer attention."),
     (15, "U-Net", "Image Segmentation", "Synthetic Circles", "15_unet", "Encoder-decoder architecture with skip connections."),
+    (16, "YOLO", "Object Detection", "Synthetic Shapes", "16_yolo", "Single-stage detector: grid head + NMS, predicts boxes and classes in one pass."),
 ]
 
 @st.cache_resource
@@ -56,7 +59,7 @@ def render_home():
     st.caption("A professional Streamlit interface for exploring 15 deep-learning implementations.")
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Models", "15")
+    c1.metric("Models", "16")
     c2.metric("Model Families", "11+")
     c3.metric("Core Tasks", "5")
     c4.metric("Interface", "Streamlit")
@@ -175,7 +178,7 @@ def main():
     with st.sidebar:
         st.markdown("# 🧠 Deep Learning Lab")
         st.caption("15 architectures · interactive showcase")
-        page = st.radio("Navigate", ["Overview", "Model Catalog", "ANN Demo", "Image Playground", "About"], index=0)
+        page = st.radio("Navigate", ["Overview", "Model Catalog", "ANN Demo", "YOLO Demo", "Image Playground", "About"], index=0)
         st.divider()
         st.markdown("**Source**")
         st.markdown("[GitHub repository](https://github.com/deepvisionkararhaider-crypto/deep-learning-models)")
@@ -187,6 +190,8 @@ def main():
         render_models()
     elif page == "ANN Demo":
         render_ann()
+    elif page == "YOLO Demo":
+        render_yolo()
     elif page == "Image Playground":
         render_image()
     else:

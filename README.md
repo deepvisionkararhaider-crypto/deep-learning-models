@@ -1,6 +1,6 @@
 # Deep Learning Models — Interactive Streamlit Lab
 
-A professional collection of **15 deep-learning model implementations** presented through a polished Streamlit interface. The original numbered model folders are preserved, while `app.py` provides a public-facing interactive experience for exploring the architectures and running lightweight browser demos.
+A professional collection of **16 deep-learning model implementations** presented through a polished Streamlit interface. The original numbered model folders are preserved, while `app.py` provides a public-facing interactive experience for exploring the architectures and running lightweight browser demos.
 
 > **Live demo:** deployment is configured, but a public URL has not been fabricated. The connected Render workspace currently requires payment information before it will create a public web service.
 
@@ -9,7 +9,7 @@ A professional collection of **15 deep-learning model implementations** presente
 This repository is no longer only a model-code collection. It now includes:
 
 - A production-oriented **Streamlit application** (`app.py`)
-- Interactive model catalog covering all 15 implementations
+- Interactive model catalog covering all 16 implementations
 - Lightweight **ANN demonstration** using the Breast Cancer dataset
 - Image upload and preprocessing playground for computer-vision workflows
 - Dedicated project/about pages and repository navigation
@@ -37,6 +37,7 @@ This repository is no longer only a model-code collection. It now includes:
 | 13 | DenseNet | Image Classification | CIFAR-10 | `13_densenet/` |
 | 14 | ViT | Image Classification | CIFAR-10 | `14_vit/` |
 | 15 | U-Net | Image Segmentation | Synthetic Circles | `15_unet/` |
+| 16 | YOLO | Object Detection | Synthetic Shapes | `16_yolo/` |
 
 ## 🖥️ Streamlit Application
 
@@ -50,10 +51,11 @@ streamlit run app.py
 The interface contains:
 
 1. **Overview** — project summary, architecture coverage, and key metrics
-2. **Model Catalog** — all 15 model families with direct source-folder links
+2. **Model Catalog** — all 16 model families with direct source-folder links
 3. **ANN Demo** — browser-based MLP inference demonstration
-4. **Image Playground** — image upload, resizing, normalization, and tensor-shape inspection
-5. **About** — architecture, technology, and repository information
+4. **YOLO Demo** — single-stage object detection with bounding boxes and NMS
+5. **Image Playground** — image upload, resizing, normalization, and tensor-shape inspection
+6. **About** — architecture, technology, and repository information
 
 The application deliberately keeps the full training dependencies separate from the lightweight deployment stack. This prevents a public demo from unnecessarily installing the complete TensorFlow/PyTorch research environment.
 
@@ -85,7 +87,8 @@ deep-learning-models/
 ├── 12_resnet/
 ├── 13_densenet/
 ├── 14_vit/
-└── 15_unet/
+├── 15_unet/
+└── 16_yolo/
 ```
 
 ## 📊 Evaluation Metrics

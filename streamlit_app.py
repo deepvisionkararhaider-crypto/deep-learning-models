@@ -22,10 +22,11 @@ MODELS = {
     "DenseNet — CIFAR-10": ("13_densenet", "Dense connectivity for image classification"),
     "ViT — CIFAR-10": ("14_vit", "Vision Transformer image classification"),
     "U-Net — Segmentation": ("15_unet", "Encoder-decoder image segmentation"),
+    "YOLO — Object Detection": ("16_yolo", "Single-stage detection: grid head + NMS"),
 }
 
 st.title("🧠 Deep Learning Models Lab")
-st.caption("Interactive portfolio dashboard for 15 deep-learning architectures and their learning objectives.")
+st.caption("Interactive portfolio dashboard for 16 deep-learning architectures and their learning objectives.")
 
 with st.sidebar:
     st.header("Explore Models")
