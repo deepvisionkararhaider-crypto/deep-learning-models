@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: deep-learning-models
+    runtime: python
+    plan: free
+    region: singapore
+    branch: main
+    autoDeploy: true
+    buildCommand: pip install -r requirements-streamlit.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
