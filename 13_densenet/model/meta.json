@@ -1,0 +1,12 @@
+{
+  "id": 13,
+  "name": "DenseNet",
+  "architecture": "Dense connectivity network",
+  "framework": "PyTorch (mirrors 13_densenet)",
+  "task": "10-class digit classification",
+  "dataset": "MNIST",
+  "input": "28x28 grayscale image",
+  "n_classes": 10,
+  "metric_name": "train accuracy",
+  "metric_value": 0.3603
+}

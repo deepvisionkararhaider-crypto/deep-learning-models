@@ -54,8 +54,14 @@ class UNet(nn.Module):
     def __init__(self): super().__init__(); self.e1=nn.Conv2d(1,8,3,padding=1); self.e2=nn.Conv2d(8,16,3,padding=1); self.out=nn.Conv2d(16,1,1)
     def forward(self,x): z=F.max_pool2d(F.relu(self.e1(x)),2); return self.out(F.interpolate(F.relu(self.e2(z)),size=x.shape[-2:]))
 class YOLOLite(nn.Module):
-    def __init__(self): super().__init__(); self.back=nn.Sequential(nn.Conv2d(1,16,3,padding=1),nn.ReLU(),nn.MaxPool2d(2),nn.Conv2d(16,32,3,padding=1),nn.ReLU(),nn.AdaptiveAvgPool2d(1)); self.head=nn.Linear(32,14)
-    def forward(self,x): return self.head(self.back(x).flatten(1))
+    def __init__(self):
+        super().__init__()
+        self.back=nn.Sequential(nn.Conv2d(1,16,3,padding=1),nn.ReLU(),nn.MaxPool2d(2),
+                                nn.Conv2d(16,32,3,padding=1),nn.ReLU(),
+                                nn.Conv2d(32,32,3,padding=1),nn.ReLU(),
+                                nn.AdaptiveAvgPool2d((8,8)))
+        self.head=nn.Conv2d(32,8,1)          # per-cell [obj,x,y,w,h,c0,c1,c2]
+    def forward(self,x): return self.head(self.back(x)).permute(0,2,3,1)
 class Siamese(nn.Module):
     def __init__(self): super().__init__(); self.enc=nn.Sequential(nn.Flatten(),nn.Linear(64,32),nn.ReLU(),nn.Linear(32,16))
     def forward(self,a,b): return self.enc(a),self.enc(b)
@@ -114,9 +120,13 @@ def train_one(model_id,epochs=3,lr=1e-3):
         for _ in range(epochs): opt.zero_grad(); loss=F.binary_cross_entropy_with_logits(model(x),target); loss.backward(); opt.step(); losses.append(float(loss))
         return model,losses,float((torch.sigmoid(model(x))>.5).eq(target).float().mean())
     if model_id==16:
-        x,y,_=digits(); x,y=_sample(x,y); box=_bbox(x); model=cls(); opt=torch.optim.Adam(model.parameters(),lr=lr); losses=[]
-        for _ in range(epochs): opt.zero_grad(); out=model(x); loss=F.mse_loss(torch.sigmoid(out[:,:4]),box)+F.cross_entropy(out[:,4:],y); loss.backward(); opt.step(); losses.append(float(loss))
-        return model,losses,float((model(x)[:,4:].argmax(1)==y).float().mean())
+        from tools.build_artifacts import synth_detection
+        x,t=synth_detection(n=256); model=cls(); opt=torch.optim.Adam(model.parameters(),lr=lr); losses=[]
+        for _ in range(epochs):
+            opt.zero_grad(); out=model(x); obj=t[...,0:1]
+            loss=F.mse_loss(torch.sigmoid(out[...,1:5])*obj,t[...,1:5]*obj)+F.binary_cross_entropy_with_logits(out[...,5:],t[...,5:]); loss.backward(); opt.step(); losses.append(float(loss))
+        with torch.no_grad(): acc=float(((torch.sigmoid(model(x)[...,0])>0.5)==(t[...,0]>0.5)).float().mean())
+        return model,losses,acc
     if model_id==17:
         x,y,_=digits(); x,y=_sample(x,y,256); b=torch.roll(x,1,0); same=(y==torch.roll(y,1,0)).float(); model=cls(); opt=torch.optim.Adam(model.parameters(),lr=lr); losses=[]
         for _ in range(epochs):

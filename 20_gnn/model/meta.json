@@ -1,0 +1,12 @@
+{
+  "id": 20,
+  "name": "GNN",
+  "architecture": "Graph convolution (message passing)",
+  "framework": "PyTorch",
+  "task": "Cora 7-class node classification",
+  "dataset": "Cora citation network (Planetoid)",
+  "input": "1433-dim node feature vector",
+  "n_classes": 7,
+  "metric_name": "train accuracy",
+  "metric_value": 0.877
+}

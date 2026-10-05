@@ -1,0 +1,12 @@
+{
+  "id": 6,
+  "name": "Autoencoder",
+  "architecture": "Convolutional autoencoder (64->12->64)",
+  "framework": "PyTorch (mirrors 06_autoencoder)",
+  "task": "Image reconstruction / anomaly score",
+  "dataset": "MNIST (unnormalised digits)",
+  "input": "28x28 grayscale image",
+  "n_classes": 0,
+  "metric_name": "reconstruction MSE",
+  "metric_value": 0.0674
+}

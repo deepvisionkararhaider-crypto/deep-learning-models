@@ -1,0 +1,12 @@
+{
+  "id": 8,
+  "name": "GAN",
+  "architecture": "GAN discriminator (+generator shipped)",
+  "framework": "PyTorch (mirrors 08_gan)",
+  "task": "Real vs generated digit classification",
+  "dataset": "MNIST",
+  "input": "28x28 grayscale image",
+  "n_classes": 2,
+  "metric_name": "discriminator accuracy on real digits",
+  "metric_value": 0.3442
+}

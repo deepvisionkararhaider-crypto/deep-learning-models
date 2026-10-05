@@ -1,0 +1,12 @@
+{
+  "id": 4,
+  "name": "LSTM",
+  "architecture": "Long Short-Term Memory network",
+  "framework": "PyTorch (mirrors 04_lstm)",
+  "task": "6-class activity recognition",
+  "dataset": "UCI Human Activity Recognition Using Smartphones",
+  "input": "93 x 6 sensor window",
+  "n_classes": 6,
+  "metric_name": "train accuracy",
+  "metric_value": 0.4309
+}

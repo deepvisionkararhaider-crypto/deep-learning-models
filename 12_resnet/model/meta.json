@@ -1,0 +1,12 @@
+{
+  "id": 12,
+  "name": "ResNet",
+  "architecture": "Residual network",
+  "framework": "PyTorch (mirrors 12_resnet)",
+  "task": "10-class digit classification",
+  "dataset": "MNIST (named as the image task in 12_resnet)",
+  "input": "28x28 grayscale image",
+  "n_classes": 10,
+  "metric_name": "train accuracy",
+  "metric_value": 0.2806
+}

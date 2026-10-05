@@ -1,0 +1,12 @@
+{
+  "id": 15,
+  "name": "U-Net",
+  "architecture": "Encoder-decoder with skip connections",
+  "framework": "PyTorch (mirrors 15_unet)",
+  "task": "Binary image segmentation",
+  "dataset": "Synthetic circle-segmentation dataset (same generator as 15_unet)",
+  "input": "64x64 grayscale image",
+  "n_classes": 0,
+  "metric_name": "test mean IoU",
+  "metric_value": 0.1386
+}

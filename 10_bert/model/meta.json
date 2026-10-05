@@ -1,0 +1,12 @@
+{
+  "id": 10,
+  "name": "BERT-style",
+  "architecture": "Bidirectional Transformer encoder",
+  "framework": "PyTorch (mirrors 10_bert DistilBERT script; a small in-repo encoder is trained here so the demo stays CPU/free-tier friendly)",
+  "task": "4-class topic classification",
+  "dataset": "20 Newsgroups (4 categories)",
+  "input": "free text",
+  "n_classes": 4,
+  "metric_name": "train accuracy",
+  "metric_value": 0.6845
+}

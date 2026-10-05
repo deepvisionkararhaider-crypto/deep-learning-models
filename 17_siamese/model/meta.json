@@ -1,0 +1,12 @@
+{
+  "id": 17,
+  "name": "Siamese Network",
+  "architecture": "Twin encoder + L2 distance head",
+  "framework": "PyTorch",
+  "task": "Same/different digit verification (metric learning)",
+  "dataset": "MNIST",
+  "input": "two 28x28 grayscale images",
+  "n_classes": 2,
+  "metric_name": "verification accuracy",
+  "metric_value": 0.893
+}

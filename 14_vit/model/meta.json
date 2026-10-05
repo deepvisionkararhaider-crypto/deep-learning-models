@@ -1,0 +1,12 @@
+{
+  "id": 14,
+  "name": "ViT",
+  "architecture": "Vision Transformer (patch embeddings)",
+  "framework": "PyTorch (mirrors 14_vit)",
+  "task": "10-class digit classification",
+  "dataset": "MNIST",
+  "input": "28x28 grayscale image",
+  "n_classes": 10,
+  "metric_name": "train accuracy",
+  "metric_value": 0.3413
+}

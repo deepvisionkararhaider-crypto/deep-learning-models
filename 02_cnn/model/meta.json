@@ -1,0 +1,12 @@
+{
+  "id": 2,
+  "name": "CNN",
+  "architecture": "Convolutional Neural Network",
+  "framework": "PyTorch (mirrors 02_cnn TF/Keras script)",
+  "task": "10-class handwritten-digit classification",
+  "dataset": "MNIST (LeCun) \u2014 the dataset named in 02_cnn",
+  "input": "28x28 grayscale image",
+  "n_classes": 10,
+  "metric_name": "train accuracy",
+  "metric_value": 0.5085
+}

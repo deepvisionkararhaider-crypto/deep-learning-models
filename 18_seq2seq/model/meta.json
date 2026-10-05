@@ -1,0 +1,12 @@
+{
+  "id": 18,
+  "name": "Seq2Seq",
+  "architecture": "Encoder-decoder (noisy reconstruction)",
+  "framework": "PyTorch",
+  "task": "Token-level reconstruction of a text window",
+  "dataset": "20 Newsgroups corpus",
+  "input": "free text",
+  "n_classes": 0,
+  "metric_name": "vocab size",
+  "metric_value": 1024
+}

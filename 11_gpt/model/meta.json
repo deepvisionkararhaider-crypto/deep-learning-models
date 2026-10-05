@@ -1,0 +1,12 @@
+{
+  "id": 11,
+  "name": "GPT-style",
+  "architecture": "Causal (masked) Transformer LM head",
+  "framework": "PyTorch (mirrors 11_gpt GPT-2 script; small in-repo LM trained here)",
+  "task": "Autoregressive next-token text generation",
+  "dataset": "20 Newsgroups corpus",
+  "input": "free text prompt",
+  "n_classes": 0,
+  "metric_name": "vocab size",
+  "metric_value": 1024
+}

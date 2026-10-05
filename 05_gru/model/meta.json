@@ -1,0 +1,12 @@
+{
+  "id": 5,
+  "name": "GRU",
+  "architecture": "Gated Recurrent Unit network",
+  "framework": "PyTorch (mirrors 05_gru)",
+  "task": "6-class activity recognition",
+  "dataset": "UCI Human Activity Recognition Using Smartphones",
+  "input": "93 x 6 sensor window",
+  "n_classes": 6,
+  "metric_name": "train accuracy",
+  "metric_value": 0.4446
+}

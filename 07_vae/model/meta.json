@@ -1,0 +1,12 @@
+{
+  "id": 7,
+  "name": "VAE",
+  "architecture": "Variational autoencoder",
+  "framework": "PyTorch (mirrors 07_vae)",
+  "task": "Reconstruction + latent generation",
+  "dataset": "MNIST",
+  "input": "28x28 grayscale image",
+  "n_classes": 0,
+  "metric_name": "train loss",
+  "metric_value": 0.3374
+}

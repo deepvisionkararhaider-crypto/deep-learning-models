@@ -1,0 +1,12 @@
+{
+  "id": 9,
+  "name": "Transformer",
+  "architecture": "Transformer encoder (attention)",
+  "framework": "PyTorch (mirrors 09_transformer)",
+  "task": "4-class topic classification",
+  "dataset": "20 Newsgroups (4 categories)",
+  "input": "free text",
+  "n_classes": 4,
+  "metric_name": "train accuracy",
+  "metric_value": 0.6845
+}

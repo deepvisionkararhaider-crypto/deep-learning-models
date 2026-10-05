@@ -1,0 +1,12 @@
+{
+  "id": 19,
+  "name": "Diffusion MLP",
+  "architecture": "Noise-conditioned denoising MLP",
+  "framework": "PyTorch",
+  "task": "Tabular denoising (reconstruct a clean feature row)",
+  "dataset": "Breast Cancer Wisconsin (Diagnostic)",
+  "input": "30 numeric features",
+  "n_classes": 0,
+  "metric_name": "denoise MSE",
+  "metric_value": 0.0856
+}

@@ -1,0 +1,12 @@
+{
+  "id": 16,
+  "name": "YOLO-style",
+  "architecture": "Single-stage detection head (8x8 grid)",
+  "framework": "PyTorch (mirrors 16_yolo)",
+  "task": "Object detection + classification",
+  "dataset": "Synthetic multi-shape dataset (same generator as 16_yolo)",
+  "input": "64x64 grayscale image",
+  "n_classes": 3,
+  "metric_name": "detection recall (test, conf>=0.3)",
+  "metric_value": 1.0
+}

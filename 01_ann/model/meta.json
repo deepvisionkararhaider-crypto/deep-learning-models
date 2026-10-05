@@ -1,0 +1,12 @@
+{
+  "id": 1,
+  "name": "ANN / MLP",
+  "architecture": "Multi-Layer Perceptron",
+  "framework": "PyTorch (mirrors the TensorFlow/Keras training script in 01_ann)",
+  "task": "Binary classification \u2014 malignant vs benign",
+  "dataset": "Breast Cancer Wisconsin (Diagnostic), UCI / scikit-learn",
+  "input": "30 numeric cell-nucleus features",
+  "n_classes": 2,
+  "metric_name": "train accuracy",
+  "metric_value": 0.993
+}
