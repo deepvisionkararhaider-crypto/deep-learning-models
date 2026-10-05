@@ -1,14 +1,14 @@
 """Train all 20 models once and serialize their real-dataset weights.
-
-The public Streamlit app loads the generated pretrained_weights.py and performs
-inference only. It must never retrain models for visitors.
+The public Streamlit app loads pretrained_weights.py and performs inference only.
 """
 import base64
 import gzip
 import io
 import torch
+import torch.nn.functional as F
 
-from model_zoo import MODEL_SPECS, train_one
+from model_zoo import MODEL_SPECS, train_one, SPEC_BY_ID
+from real_datasets import cora
 
 torch.set_num_threads(2)
 
@@ -19,18 +19,38 @@ def pack_state_dict(model):
     return base64.b64encode(gzip.compress(buf.getvalue(), 9)).decode("ascii")
 
 
+def train_gnn_cpu(epochs=3, lr=1e-3):
+    """Train GNN on a real 256-node Cora subgraph to keep free CI CPU-safe."""
+    _, _, cls, _, _ = SPEC_BY_ID[20]
+    x, y, a = cora()
+    n = min(256, x.shape[0])
+    x, y, a = x[:n], y[:n], a[:n, :n]
+    model = cls()
+    opt = torch.optim.Adam(model.parameters(), lr=lr)
+    losses = []
+    for _ in range(epochs):
+        opt.zero_grad()
+        loss = F.cross_entropy(model(x, a), y)
+        loss.backward()
+        opt.step()
+        losses.append(float(loss))
+    with torch.no_grad():
+        metric = float((model(x, a).argmax(1) == y).float().mean())
+    return model, losses, metric
+
+
 def main():
     weights = {}
     metrics = {}
     for model_id, name, _, _, task in MODEL_SPECS:
         print(f"training model {model_id}: {name} | {task}", flush=True)
-        model, losses, metric = train_one(model_id, epochs=3, lr=1e-3)
+        if model_id == 20:
+            model, losses, metric = train_gnn_cpu()
+        else:
+            model, losses, metric = train_one(model_id, epochs=3, lr=1e-3)
         model.eval()
         weights[model_id] = pack_state_dict(model)
-        metrics[model_id] = {
-            "final_loss": float(losses[-1]),
-            "metric": float(metric),
-        }
+        metrics[model_id] = {"final_loss": float(losses[-1]), "metric": float(metric)}
         print(f"completed model {model_id}: loss={losses[-1]:.5f}, metric={metric:.4f}", flush=True)
 
     lines = [
