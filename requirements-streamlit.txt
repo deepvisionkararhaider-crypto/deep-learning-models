@@ -1,5 +1,7 @@
-# Same lightweight dependency set used by Streamlit Community Cloud.
+# Streamlit Community Cloud runtime dependencies
 streamlit==1.50.0
 numpy>=1.26,<3
 pillow>=10,<12
 torch>=2.2,<3
+scikit-learn>=1.4,<2
+scipy>=1.11,<2
