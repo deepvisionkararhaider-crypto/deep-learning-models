@@ -1,78 +1,83 @@
-# Deep Learning Models — Interactive Streamlit Lab
+# Deep Learning Models — 20 Trainable Architectures + Streamlit Lab
 
-A professional collection of **16 deep-learning model implementations** presented through a polished Streamlit interface. The original numbered model folders are preserved, while `app.py` provides a public-facing interactive experience for exploring the architectures and running lightweight browser demos.
+A professional, single-repository deep-learning portfolio with **20 trainable model families**, one subfolder per model, and a public-facing Streamlit application.
 
-> **Live demo:** deployment is configured, but a public URL has not been fabricated. The connected Render workspace currently requires payment information before it will create a public web service.
+## 🚀 Highlights
 
-## 🚀 What changed
-
-This repository is no longer only a model-code collection. It now includes:
-
-- A production-oriented **Streamlit application** (`app.py`)
-- Interactive model catalog covering all 16 implementations
-- Lightweight **ANN demonstration** using the Breast Cancer dataset
-- Image upload and preprocessing playground for computer-vision workflows
-- Dedicated project/about pages and repository navigation
-- Lightweight deployment dependency set in `requirements-streamlit.txt`
-- Render deployment blueprint in `render.yaml`
-- GitHub Actions Streamlit smoke test for syntax/import validation
-- Existing numbered model implementations preserved
+- **20 trainable architectures** in one GitHub repository
+- Dedicated numbered subfolder for every model
+- Root `app.py` with an interactive model catalog
+- **Interactive Training Lab**: choose any of the 20 models, set epochs and learning rate, and train it live in the browser
+- Real PyTorch forward passes, automatic differentiation, Adam optimization, loss tracking, and accuracy reporting
+- Image preprocessing playground
+- Render deployment configuration included
+- CPU-friendly synthetic demo data keeps the public app practical and avoids downloading large datasets at startup
 
 ## 🧠 Model Catalog
 
-| # | Model | Task | Dataset | Folder |
-|---:|---|---|---|---|
-| 01 | ANN (MLP) | Binary Classification | Breast Cancer Wisconsin | `01_ann/` |
-| 02 | CNN | Image Classification | MNIST | `02_cnn/` |
-| 03 | RNN | Sentiment Classification | IMDB | `03_rnn/` |
-| 04 | LSTM | Sentiment Classification | IMDB | `04_lstm/` |
-| 05 | GRU | Sentiment Classification | IMDB | `05_gru/` |
-| 06 | Autoencoder | Reconstruction / Anomaly | MNIST | `06_autoencoder/` |
-| 07 | VAE | Generative Modeling | MNIST | `07_vae/` |
-| 08 | GAN | Generative Modeling | MNIST | `08_gan/` |
-| 09 | Transformer | Text Classification | IMDB | `09_transformer/` |
-| 10 | BERT | Text Classification | IMDB | `10_bert/` |
-| 11 | GPT | Text Generation | Custom Prompts | `11_gpt/` |
-| 12 | ResNet | Image Classification | CIFAR-10 | `12_resnet/` |
-| 13 | DenseNet | Image Classification | CIFAR-10 | `13_densenet/` |
-| 14 | ViT | Image Classification | CIFAR-10 | `14_vit/` |
-| 15 | U-Net | Image Segmentation | Synthetic Circles | `15_unet/` |
-| 16 | YOLO | Object Detection | Synthetic Shapes | `16_yolo/` |
+| # | Model | Family / task | Folder |
+|---:|---|---|---|
+| 01 | ANN / MLP | Feed-forward classification | `01_ann/` |
+| 02 | CNN | Image classification | `02_cnn/` |
+| 03 | RNN | Sequence classification | `03_rnn/` |
+| 04 | LSTM | Sequence classification | `04_lstm/` |
+| 05 | GRU | Sequence classification | `05_gru/` |
+| 06 | Autoencoder | Representation learning | `06_autoencoder/` |
+| 07 | VAE | Variational representation | `07_vae/` |
+| 08 | GAN | Adversarial learning | `08_gan/` |
+| 09 | Transformer | Self-attention sequence model | `09_transformer/` |
+| 10 | BERT-style | Bidirectional transformer | `10_bert/` |
+| 11 | GPT-style | Causal transformer | `11_gpt/` |
+| 12 | ResNet | Residual vision model | `12_resnet/` |
+| 13 | DenseNet | Dense-connectivity vision model | `13_densenet/` |
+| 14 | ViT | Vision Transformer | `14_vit/` |
+| 15 | U-Net | Encoder-decoder vision model | `15_unet/` |
+| 16 | YOLO-style | Single-stage detection head | `16_yolo/` |
+| 17 | Siamese Network | Metric learning | `17_siamese/` |
+| 18 | Seq2Seq | Encoder-decoder sequence model | `18_seq2seq/` |
+| 19 | Diffusion MLP | Noise-conditioned denoising | `19_diffusion/` |
+| 20 | GNN | Graph message passing | `20_gnn/` |
+
+The original model folders are preserved. Models 17–20 extend the collection with additional trainable architectures.
 
 ## 🖥️ Streamlit Application
 
-Run the lightweight public-facing application locally:
+Run locally:
 
 ```bash
 pip install -r requirements-streamlit.txt
 streamlit run app.py
 ```
 
-The interface contains:
+The app includes:
 
-1. **Overview** — project summary, architecture coverage, and key metrics
-2. **Model Catalog** — all 16 model families with direct source-folder links
-3. **ANN Demo** — browser-based MLP inference demonstration
-4. **YOLO Demo** — single-stage object detection with bounding boxes and NMS
-5. **Image Playground** — image upload, resizing, normalization, and tensor-shape inspection
-6. **About** — architecture, technology, and repository information
+1. **Overview** — architecture coverage and project summary
+2. **20-Model Catalog** — model descriptions and GitHub navigation
+3. **Interactive Training** — live training for all 20 models
+4. **Image Playground** — upload, resize, normalize, and inspect image tensors
+5. **About** — project structure and technology information
 
-The application deliberately keeps the full training dependencies separate from the lightweight deployment stack. This prevents a public demo from unnecessarily installing the complete TensorFlow/PyTorch research environment.
+### Interactive training
 
-## 📁 Project Structure
+The training page deliberately uses deterministic synthetic data rather than claiming benchmark performance. It demonstrates the engineering workflow end-to-end:
+
+```text
+synthetic data → model → forward pass → loss → backpropagation → Adam → metrics → loss curve
+```
+
+This makes the public demo fast, reproducible, and safe to run on CPU resources.
+
+## 📁 Repository Structure
 
 ```text
 deep-learning-models/
 ├── app.py
+├── model_zoo.py
 ├── requirements.txt
 ├── requirements-streamlit.txt
 ├── render.yaml
-├── README.md
 ├── .streamlit/
-│   └── config.toml
-├── .github/
-│   └── workflows/
-│       └── streamlit-smoke.yml
+├── .github/workflows/
 ├── 01_ann/
 ├── 02_cnn/
 ├── 03_rnn/
@@ -88,62 +93,45 @@ deep-learning-models/
 ├── 13_densenet/
 ├── 14_vit/
 ├── 15_unet/
-└── 16_yolo/
-```
-
-## 📊 Evaluation Metrics
-
-- **Accuracy** — fraction of correct predictions
-- **Precision** — TP / (TP + FP)
-- **F1 score** — harmonic mean of precision and recall
-- **Confusion matrix** — true vs predicted class distribution
-- **Reconstruction MSE** — used by reconstruction models such as autoencoders
-- **Perplexity / generation loss** — relevant to language-generation models
-- **IoU** — standard segmentation metric for U-Net-style tasks
-
-## 🧪 Testing
-
-The repository includes a GitHub Actions smoke test that installs the lightweight Streamlit dependency set and validates that `app.py` compiles and imports successfully.
-
-Local validation:
-
-```bash
-python -m py_compile app.py
-python -c "import app; print('Streamlit app import: OK')"
+├── 16_yolo/
+├── 17_siamese/
+├── 18_seq2seq/
+├── 19_diffusion/
+└── 20_gnn/
 ```
 
 ## ☁️ Deployment
 
-### Render
-
-A deployment blueprint is included in `render.yaml` and uses:
+`render.yaml` is configured for a public Python web service:
 
 ```text
 Build: pip install -r requirements-streamlit.txt
 Start: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
 ```
 
-The current connected Render workspace requires payment information before a public service can be created. Once billing is enabled, the blueprint can be deployed without changing the application code.
+A live URL should only be published after the hosting provider reports the service as **Live**. The repository does not hard-code a fabricated deployment URL.
 
-### Streamlit Community Cloud
+## 🧪 Validation
 
-The repository is also structured for deployment from the `main` branch with `app.py` as the application entry point. Select this repository and set the main file to `app.py` in the Streamlit deployment interface.
+```bash
+python -m py_compile app.py model_zoo.py
+python -c "import model_zoo; print(len(model_zoo.MODEL_SPECS), 'trainable models registered')"
+```
+
+To smoke-test every interactive architecture:
+
+```bash
+python -c "import model_zoo; [model_zoo.train_one(i, epochs=1) for i, *_ in model_zoo.MODEL_SPECS]; print('20-model smoke test: OK')"
+```
+
+## 🛠️ Technology
+
+Python · PyTorch · Streamlit · NumPy · scikit-learn · Pillow · OpenCV
 
 ## 🔗 Repository
 
-**GitHub:** https://github.com/deepvisionkararhaider-crypto/deep-learning-models
-
-## 📚 Dataset Sources
-
-| Dataset | Source |
-|---|---|
-| MNIST | http://yann.lecun.com/exdb/mnist/ |
-| IMDB | https://ai.stanford.edu/~amaas/data/sentiment/ |
-| CIFAR-10 | https://www.cs.toronto.edu/~kriz/cifar.html |
-| Breast Cancer Wisconsin | https://archive.ics.uci.edu/ml/datasets/Breast+Cancer+Wisconsin+(Diagnostic) |
-| GPT-2 | https://huggingface.co/gpt2 |
-| DistilBERT | https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english |
+https://github.com/deepvisionkararhaider-crypto/deep-learning-models
 
 ## License
 
-Educational/research project. Review individual model folders for implementation-specific notes and dataset licensing requirements.
+Educational/research portfolio. Review individual model folders for implementation-specific dataset and licensing notes.
