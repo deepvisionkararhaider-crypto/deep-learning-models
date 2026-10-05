@@ -10,8 +10,9 @@ A professional, single-repository deep-learning portfolio with **20 trainable mo
 - **Interactive Training Lab**: choose any of the 20 models, set epochs and learning rate, and train it live in the browser
 - Real PyTorch forward passes, automatic differentiation, Adam optimization, loss tracking, and accuracy reporting
 - Image preprocessing playground
-- Render deployment configuration included
-- CPU-friendly synthetic demo data keeps the public app practical and avoids downloading large datasets at startup
+- **Streamlit Community Cloud ready** — no paid Render service required
+- Lightweight app dependencies so deployment does not install the full research stack
+- CPU-friendly synthetic demo data keeps the public app practical and avoids large dataset downloads at startup
 
 ## 🧠 Model Catalog
 
@@ -38,14 +39,12 @@ A professional, single-repository deep-learning portfolio with **20 trainable mo
 | 19 | Diffusion MLP | Noise-conditioned denoising | `19_diffusion/` |
 | 20 | GNN | Graph message passing | `20_gnn/` |
 
-The original model folders are preserved. Models 17–20 extend the collection with additional trainable architectures.
-
 ## 🖥️ Streamlit Application
 
-Run locally:
+Run locally from the repository root:
 
 ```bash
-pip install -r requirements-streamlit.txt
+pip install -r requirements.txt
 streamlit run app.py
 ```
 
@@ -65,7 +64,7 @@ The training page deliberately uses deterministic synthetic data rather than cla
 synthetic data → model → forward pass → loss → backpropagation → Adam → metrics → loss curve
 ```
 
-This makes the public demo fast, reproducible, and safe to run on CPU resources.
+This makes the public demo fast, reproducible, and practical on CPU resources.
 
 ## 📁 Repository Structure
 
@@ -73,9 +72,10 @@ This makes the public demo fast, reproducible, and safe to run on CPU resources.
 deep-learning-models/
 ├── app.py
 ├── model_zoo.py
-├── requirements.txt
-├── requirements-streamlit.txt
-├── render.yaml
+├── requirements.txt              # Streamlit Community Cloud runtime
+├── requirements-streamlit.txt    # Same lightweight deployment stack
+├── requirements-full.txt         # Full research/model-development stack
+├── render.yaml                   # Optional Render configuration
 ├── .streamlit/
 ├── .github/workflows/
 ├── 01_ann/
@@ -100,16 +100,27 @@ deep-learning-models/
 └── 20_gnn/
 ```
 
-## ☁️ Deployment
+## ☁️ Free Deployment — Streamlit Community Cloud
 
-`render.yaml` is configured for a public Python web service:
+This repository is intentionally configured for **Streamlit Community Cloud**. The root `app.py` is the entrypoint and the root `requirements.txt` contains only the runtime dependencies needed by the public application.
+
+Deploy from:
+
+https://share.streamlit.io/
+
+Use:
 
 ```text
-Build: pip install -r requirements-streamlit.txt
-Start: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+Repository: deepvisionkararhaider-crypto/deep-learning-models
+Branch: main
+Main file: app.py
 ```
 
-A live URL should only be published after the hosting provider reports the service as **Live**. The repository does not hard-code a fabricated deployment URL.
+Community Cloud creates a public `streamlit.app` URL and automatically updates the deployed app when changes are pushed to GitHub.
+
+### Important dependency design
+
+Do **not** point the public app at `requirements-full.txt`. That file contains the larger TensorFlow/Transformers/research stack. Community Cloud should use the lightweight root `requirements.txt` instead.
 
 ## 🧪 Validation
 
@@ -126,7 +137,7 @@ python -c "import model_zoo; [model_zoo.train_one(i, epochs=1) for i, *_ in mode
 
 ## 🛠️ Technology
 
-Python · PyTorch · Streamlit · NumPy · scikit-learn · Pillow · OpenCV
+Python · PyTorch · Streamlit · NumPy · scikit-learn · Pillow
 
 ## 🔗 Repository
 
