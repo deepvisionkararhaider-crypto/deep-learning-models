@@ -1,10 +1,6 @@
-streamlit>=1.39,<2
-pillow>=10,<12
+# Streamlit Community Cloud runtime dependencies
+# Keep this file lightweight: Community Cloud installs requirements.txt for app.py.
+streamlit==1.50.0
 numpy>=1.26,<3
-pandas>=2.0,<3
-scikit-learn>=1.3,<2
-tensorflow-cpu>=2.15,<3
-torch>=2.0,<3
-transformers>=4.30,<5
-matplotlib>=3.7,<4
-seaborn>=0.12,<1
+pillow>=10,<12
+torch>=2.2,<3
