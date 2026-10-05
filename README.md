@@ -1,18 +1,18 @@
-# Deep Learning Models — 20 Trainable Architectures + Streamlit Lab
+# Deep Learning Models — 20 Trainable Architectures + Streamlit Prediction Lab
 
-A professional, single-repository deep-learning portfolio with **20 trainable model families**, one subfolder per model, and a public-facing Streamlit application.
+A professional, single-repository deep-learning portfolio with **20 trainable model families**, one numbered subfolder per model, and a public Streamlit application.
 
 ## 🚀 Highlights
 
 - **20 trainable architectures** in one GitHub repository
 - Dedicated numbered subfolder for every model
-- Root `app.py` with an interactive model catalog
-- **Interactive Training Lab**: choose any of the 20 models, set epochs and learning rate, and train it live in the browser
-- Real PyTorch forward passes, automatic differentiation, Adam optimization, loss tracking, and accuracy reporting
+- **Prediction Studio** — provide numeric data or upload an image and receive a live prediction from a trained PyTorch model
+- **Training Lab** — choose any architecture, epochs, and learning rate and inspect the loss curve
+- Real PyTorch forward passes, automatic differentiation, Adam optimization, loss tracking, and prediction probabilities
 - Image preprocessing playground
 - **Streamlit Community Cloud ready** — no paid Render service required
-- Lightweight app dependencies so deployment does not install the full research stack
-- CPU-friendly synthetic demo data keeps the public app practical and avoids large dataset downloads at startup
+- Lightweight runtime dependencies
+- CPU-friendly deterministic demo data
 
 ## 🧠 Model Catalog
 
@@ -41,30 +41,44 @@ A professional, single-repository deep-learning portfolio with **20 trainable mo
 
 ## 🖥️ Streamlit Application
 
-Run locally from the repository root:
+Run locally:
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The app includes:
+### 🔮 Prediction Studio
 
-1. **Overview** — architecture coverage and project summary
-2. **20-Model Catalog** — model descriptions and GitHub navigation
-3. **Interactive Training** — live training for all 20 models
-4. **Image Playground** — upload, resize, normalize, and inspect image tensors
-5. **About** — project structure and technology information
+The public application now accepts **real user input** instead of only displaying model information.
 
-### Interactive training
+| Model family | User input |
+|---|---|
+| ANN / Autoencoder / VAE / GAN / Diffusion | 20 numeric features |
+| CNN / ResNet / DenseNet / ViT / U-Net / YOLO-style | PNG/JPG/WEBP image upload |
+| RNN / LSTM / GRU / Transformer / BERT / GPT / Seq2Seq | 12 sequence values |
+| Siamese Network | Two 20-feature vectors |
+| GNN | 6 nodes × 4 features = 24 values |
 
-The training page deliberately uses deterministic synthetic data rather than claiming benchmark performance. It demonstrates the engineering workflow end-to-end:
+Workflow:
 
 ```text
-synthetic data → model → forward pass → loss → backpropagation → Adam → metrics → loss curve
+user input
+   ↓
+architecture-specific preprocessing
+   ↓
+train lightweight PyTorch model
+   ↓
+forward pass on user data
+   ↓
+class prediction + confidence
 ```
 
-This makes the public demo fast, reproducible, and practical on CPU resources.
+The app trains on a deterministic synthetic demonstration dataset. Therefore the predictions demonstrate the complete ML inference workflow but **must not be presented as medical, production, or benchmark results**.
+
+### 🎛️ Training Lab
+
+The Training Lab lets you select any of the 20 architectures and configure epochs and learning rate. It performs real forward passes, backpropagation, Adam optimization, and reports loss/accuracy.
 
 ## 📁 Repository Structure
 
@@ -72,10 +86,9 @@ This makes the public demo fast, reproducible, and practical on CPU resources.
 deep-learning-models/
 ├── app.py
 ├── model_zoo.py
-├── requirements.txt              # Streamlit Community Cloud runtime
-├── requirements-streamlit.txt    # Same lightweight deployment stack
-├── requirements-full.txt         # Full research/model-development stack
-├── render.yaml                   # Optional Render configuration
+├── requirements.txt
+├── requirements-streamlit.txt
+├── requirements-full.txt
 ├── .streamlit/
 ├── .github/workflows/
 ├── 01_ann/
@@ -102,12 +115,6 @@ deep-learning-models/
 
 ## ☁️ Free Deployment — Streamlit Community Cloud
 
-This repository is intentionally configured for **Streamlit Community Cloud**. The root `app.py` is the entrypoint and the root `requirements.txt` contains only the runtime dependencies needed by the public application.
-
-Deploy from:
-
-https://share.streamlit.io/
-
 Use:
 
 ```text
@@ -116,11 +123,11 @@ Branch: main
 Main file: app.py
 ```
 
-Community Cloud creates a public `streamlit.app` URL and automatically updates the deployed app when changes are pushed to GitHub.
+The root `requirements.txt` is intentionally lightweight for the public Streamlit deployment.
 
-### Important dependency design
+## ⚠️ Important
 
-Do **not** point the public app at `requirements-full.txt`. That file contains the larger TensorFlow/Transformers/research stack. Community Cloud should use the lightweight root `requirements.txt` instead.
+This portfolio uses synthetic deterministic data for the browser demo so all 20 architectures can run on CPU without downloading large datasets. The app is an **engineering/education demonstration of training and inference**, not a claim of real-world model performance.
 
 ## 🧪 Validation
 
@@ -128,16 +135,6 @@ Do **not** point the public app at `requirements-full.txt`. That file contains t
 python -m py_compile app.py model_zoo.py
 python -c "import model_zoo; print(len(model_zoo.MODEL_SPECS), 'trainable models registered')"
 ```
-
-To smoke-test every interactive architecture:
-
-```bash
-python -c "import model_zoo; [model_zoo.train_one(i, epochs=1) for i, *_ in model_zoo.MODEL_SPECS]; print('20-model smoke test: OK')"
-```
-
-## 🛠️ Technology
-
-Python · PyTorch · Streamlit · NumPy · scikit-learn · Pillow
 
 ## 🔗 Repository
 
