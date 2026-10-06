@@ -25,27 +25,27 @@ until they resolve, so this table never contains an unverified URL.
 
 | # | Model | Framework | Task | App entry point | Live demo |
 |--:|---|---|---|---|---|
-| 1 | ANN / MLP | PyTorch | Breast-cancer binary classification | `01_ann/app.py` | _pending_ |
-| 2 | CNN | PyTorch | MNIST digit classification | `02_cnn/app.py` | _pending_ |
-| 3 | RNN | PyTorch | HAR activity recognition | `03_rnn/app.py` | _pending_ |
-| 4 | LSTM | PyTorch | HAR activity recognition | `04_lstm/app.py` | _pending_ |
-| 5 | GRU | PyTorch | HAR activity recognition | `05_gru/app.py` | _pending_ |
-| 6 | Autoencoder | PyTorch | Image reconstruction | `06_autoencoder/app.py` | _pending_ |
-| 7 | VAE | PyTorch | Variational reconstruction | `07_vae/app.py` | _pending_ |
-| 8 | GAN | PyTorch | Real-vs-generated discrimination | `08_gan/app.py` | _pending_ |
-| 9 | Transformer | PyTorch | 4-class topic classification | `09_transformer/app.py` | _pending_ |
-| 10 | BERT-style | PyTorch | 4-class topic classification | `10_bert/app.py` | _pending_ |
-| 11 | GPT-style | PyTorch | Autoregressive text generation | `11_gpt/app.py` | _pending_ |
-| 12 | ResNet | PyTorch | MNIST digit classification | `12_resnet/app.py` | _pending_ |
-| 13 | DenseNet | PyTorch | MNIST digit classification | `13_densenet/app.py` | _pending_ |
-| 14 | ViT | PyTorch | MNIST digit classification | `14_vit/app.py` | _pending_ |
-| 15 | U-Net | PyTorch | Binary image segmentation | `15_unet/app.py` | _pending_ |
-| 16 | YOLO-style | PyTorch | Object detection | `16_yolo/app.py` | _pending_ |
-| 17 | Siamese | PyTorch | Same/different digit verification | `17_siamese/app.py` | _pending_ |
-| 18 | Seq2Seq | PyTorch | Text token reconstruction | `18_seq2seq/app.py` | _pending_ |
-| 19 | Diffusion MLP | PyTorch | Tabular denoising | `19_diffusion/app.py` | _pending_ |
-| 20 | GNN | PyTorch | Cora node classification | `20_gnn/app.py` | _pending_ |
-| — | **AI Model Lab** (dashboard) | Streamlit | Portfolio of all 20 | `dashboard.py` | _pending_ |
+| 1 | ANN / MLP | PyTorch | Breast-cancer binary classification | `01_ann/app.py` |https://deepvisionkararhaider-crypto-deep-learning-mod-01-annapp-1bfjpi.streamlit.app/ |
+| 2 | CNN | PyTorch | MNIST digit classification | `02_cnn/app.py` | https://deepvisionkararhaider-crypto-deep-learning-mod-02-cnnapp-zphbhe.streamlit.app/ |
+| 3 | RNN | PyTorch | HAR activity recognition | `03_rnn/app.py` |https://deepvisionkararhaider-crypto-deep-learning-mod-03-rnnapp-qgt25o.streamlit.app/|
+| 4 | LSTM | PyTorch | HAR activity recognition | `04_lstm/app.py` | https://deepvisionkararhaider-crypto-deep-learning-mo-04-lstmapp-yfripw.streamlit.app/ |
+| 5 | GRU | PyTorch | HAR activity recognition | `05_gru/app.py` |https://deepvisionkararhaider-crypto-deep-learning-mod-05-gruapp-mlaovw.streamlit.app/ |
+| 6 | Autoencoder | PyTorch | Image reconstruction | `06_autoencoder/app.py` |https://deepvisionkararhaider-crypto-deep-lear-06-autoencoderapp-adqpjc.streamlit.app/ |
+| 7 | VAE | PyTorch | Variational reconstruction | `07_vae/app.py` | https://deepvisionkararhaider-crypto-deep-learning-mod-07-vaeapp-4tp6ow.streamlit.app/ |
+| 8 | GAN | PyTorch | Real-vs-generated discrimination | `08_gan/app.py` |https://deepvisionkararhaider-crypto-deep-learning-mod-08-ganapp-o7e27r.streamlit.app/ |
+| 9 | Transformer | PyTorch | 4-class topic classification | `09_transformer/app.py` | https://deepvisionkararhaider-crypto-deep-lear-09-transformerapp-bjjabz.streamlit.app/ |
+| 10 | BERT-style | PyTorch | 4-class topic classification | `10_bert/app.py` | https://deepvisionkararhaider-crypto-deep-learning-mo-10-bertapp-ont3nu.streamlit.app/ |
+| 11 | GPT-style | PyTorch | Autoregressive text generation | `11_gpt/app.py` | https://deepvisionkararhaider-crypto-deep-learning-mod-11-gptapp-dzavsz.streamlit.app/ |
+| 12 | ResNet | PyTorch | MNIST digit classification | `12_resnet/app.py` | https://deepvisionkararhaider-crypto-deep-learning--12-resnetapp-ldlsgq.streamlit.app/ |
+| 13 | DenseNet | PyTorch | MNIST digit classification | `13_densenet/app.py` |https://deepvisionkararhaider-crypto-deep-learnin-13-densenetapp-ikma6j.streamlit.app/ |
+| 14 | ViT | PyTorch | MNIST digit classification | `14_vit/app.py` |https://deepvisionkararhaider-crypto-deep-learning-mod-14-vitapp-pbq21u.streamlit.app/|
+| 15 | U-Net | PyTorch | Binary image segmentation | `15_unet/app.py` | https://deepvisionkararhaider-crypto-deep-learning-mo-15-unetapp-jav18t.streamlit.app/ |
+| 16 | YOLO-style | PyTorch | Object detection | `16_yolo/app.py` | https://deepvisionkararhaider-crypto-deep-learning-mo-16-yoloapp-6v1d0u.streamlit.app/ |
+| 17 | Siamese | PyTorch | Same/different digit verification | `17_siamese/app.py` | https://deepvisionkararhaider-crypto-deep-learning-17-siameseapp-xlopa0.streamlit.app/ |
+| 18 | Seq2Seq | PyTorch | Text token reconstruction | `18_seq2seq/app.py` | https://deepvisionkararhaider-crypto-deep-learning-18-seq2seqapp-y51bd9.streamlit.app/ |
+| 19 | Diffusion MLP | PyTorch | Tabular denoising | `19_diffusion/app.py` |https://deepvisionkararhaider-crypto-deep-learni-19-diffusionapp-c3r5cg.streamlit.app/ |
+| 20 | GNN | PyTorch | Cora node classification | `20_gnn/app.py` |https://deepvisionkararhaider-crypto-deep-learning-mod-20-gnnapp-y5vt7s.streamlit.app/ |
+| — | **AI Model Lab** (dashboard) | Streamlit | Portfolio of all 20 | `dashboard.py` |https://deepvisionkararhaider-crypto-deep-learning-mod-dashboard-d9ztuh.streamlit.app/ |
 
 > “_pending_” means the app is fully prepared and tested locally; the URL is
 > created when you deploy it on Streamlit Community Cloud. No placeholder or
