@@ -246,16 +246,22 @@ def train_det_mnist(spec):
             opt.zero_grad(); loss = yolo_loss(model(x_tr[idx]), tgt); loss.backward(); opt.step()
     model.eval()
     with torch.inference_mode():
-        preds = [decode_predictions(model(x_te[i:i + 128])[k].cpu(), conf_thr=0.3)
-                 for k, i in enumerate(range(0, len(x_te), 128))]
+        preds = []
+        for i in range(0, len(x_te), 128):
+            batch_out = model(x_te[i:i + 128])
+            preds.extend(decode_predictions(batch_out[j].cpu(), conf_thr=0.3)
+                         for j in range(batch_out.shape[0]))
     tp = sum(len(p) for p in preds); aps = []
-    for k, i in enumerate(range(0, len(x_te), 128)):
-        for j, b in enumerate(b_tr[i:i + 128]):
-            gt = xywh_to_xyxy(b[None])                       # (1,4)
-            pr = torch.tensor([[q["x1"], q["y1"], q["x2"], q["y2"]] for q in preds[k]])
-            if pr.numel() and gt.numel():
-                iou = box_iou(pr, gt)                        # (K,1)
-                aps.append(float(iou.max(0).values.item() >= 0.5))
+    for i, b in enumerate(b_te):
+        gt = xywh_to_xyxy(b[None])
+        pr = torch.tensor([[q["x1"], q["y1"], q["x2"], q["y2"]] for q in preds[i]])
+        if pr.numel() and gt.numel():
+            iou = box_iou(pr, gt)
+            aps.append(float(iou.max(0).values.item() >= 0.5))
+        elif not pr.numel() and not gt.numel():
+            aps.append(1.0)
+        else:
+            aps.append(0.0)
     m = {"mAP@50": round(float(np.mean(aps)) if aps else 0.0, 4), "detections": tp}
     return model, m, _meta(spec, m, {"epochs": 8, "grid": grid})
 
@@ -364,6 +370,9 @@ def main():
     print("\n===== LAB SUMMARY =====")
     for mid, st in summary:
         print(f"  {mid}  {st}")
+    failures = [(mid, st) for mid, st in summary if st.startswith("FAILED")]
+    if failures:
+        raise SystemExit(f"{len(failures)} lab model(s) failed: {failures}")
 
 
 if __name__ == "__main__":

@@ -109,7 +109,7 @@ def main() -> int:
         print(f"{mid:18s} {name[:34]:34s} {state} {err[:40]}")
     print("-" * 78)
     print(f"READY={counts['READY']}  ARCH-ONLY={counts['ARCH-ONLY']}  INFER-FAILED={counts['INFER-FAILED']}")
-    return 1 if counts["INFER-FAILED"] else 0
+    return 1 if counts["INFER-FAILED"] or counts["ARCH-ONLY"] else 0
 
 
 if __name__ == "__main__":

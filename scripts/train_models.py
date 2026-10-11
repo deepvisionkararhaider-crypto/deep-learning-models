@@ -379,6 +379,11 @@ def main():
     print("\n===== TRAINING SUMMARY =====")
     for mid, status in summary:
         print(f"  {mid:18s} {status}")
+    failures = [(mid, status) for mid, status in summary
+                if status.startswith("failed:") or status.startswith("SKIP:") or status.startswith("skipped-")]
+    if failures:
+        details = ", ".join(f"{mid}={status}" for mid, status in failures)
+        raise SystemExit(f"{len(failures)} CV model(s) were not trained: {details}")
 
 
 if __name__ == "__main__":
