@@ -102,6 +102,35 @@ DATASETS.md                dataset sources, licences, annotation formats
 
 ---
 
+## Train once, serve predictions to every visitor
+
+**Visitors never train models.** The Streamlit app is inference-only: opening the site, uploading an image, or clicking Predict does not start training. The app loads saved weights and metadata from `artifacts/`. Every visitor can use the same committed artifacts.
+
+Training is an owner/maintainer task, performed once on a machine with enough RAM/CPU (or an appropriate training runner). After validating the results, commit the weights and metadata to GitHub; Streamlit Community Cloud then loads those files on deployment/restart.
+
+The training scripts now **skip models that already have valid artifacts** by default. Use `--force` only when you intentionally want to retrain.
+
+```bash
+# 1. Install training-only dependencies on your own computer
+pip install -r requirements-train.txt
+
+# 2. Train only the MNIST CNN (if it is missing or fails the quality gate)
+python scripts/train_lab.py --model 2
+
+# 3. Train a specific medical/agriculture model (example)
+python scripts/train_models.py --model brain_densenet --epochs 4
+
+# 4. Verify saved artifacts and smoke-test inference
+python scripts/verify_models.py
+
+# 5. Run the prediction app locally
+streamlit run app.py
+```
+
+After verifying a model, commit both its `artifacts/<area>/<model_id>.pt` weights and matching `artifacts/metadata/<model_id>.json` metadata. Do not claim a model is ready unless its weights load and its held-out metrics are acceptable. Large models may exceed GitHub's normal file-size limit; use Git LFS or external artifact storage if needed, while ensuring the deployed app can actually retrieve the artifacts.
+
+To deliberately retrain an existing model, add `--force`, for example `python scripts/train_lab.py --model 2 --force`.
+
 ## Training (offline, your machine or CI)
 
 ```bash
