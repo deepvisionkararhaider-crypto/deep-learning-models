@@ -67,6 +67,10 @@ jobs:
         if: ${{ inputs.train_lab }}
         run: python scripts/train_lab.py --model all
 
+      - name: Fetch required medical and agriculture datasets
+        if: ${{ inputs.train_cv }}
+        run: python scripts/_fetch_data.py
+
       - name: Train medical and agriculture models (skip valid existing artifacts)
         if: ${{ inputs.train_cv }}
         run: python scripts/train_models.py --model all --epochs ${{ inputs.cv_epochs }} --batch-size 8
