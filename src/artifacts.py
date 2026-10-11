@@ -81,7 +81,26 @@ def save_model(model: torch.nn.Module, model_id: str, area: str, metadata: dict[
 
 
 def has_weights(model_id: str, area: str) -> bool:
-    return weights_path(model_id, area).exists()
+    """Return True only when an artifact exists and passes basic integrity gates.
+
+    A file on disk is not proof that a classifier is useful. In particular,
+    the MNIST lab classifiers are not exposed in the prediction selector when
+    their recorded held-out accuracy is below 90%; retrain them before serving.
+    Other tasks still require both weights and parseable metadata marked trained.
+    """
+    wpath = weights_path(model_id, area)
+    if not wpath.is_file() or wpath.stat().st_size == 0:
+        return False
+    meta = read_metadata(model_id)
+    if not meta or meta.get("model_id", model_id) != model_id:
+        return False
+    if meta.get("trained") is False:
+        return False
+    if area == "lab" and meta.get("dataset_key") == "mnist" and meta.get("task") == "classification":
+        accuracy = (meta.get("metrics") or {}).get("accuracy")
+        if not isinstance(accuracy, (int, float)) or accuracy < 0.90:
+            return False
+    return True
 
 
 def read_metadata(model_id: str) -> dict[str, Any] | None:
