@@ -334,6 +334,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="all")
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--force", action="store_true", help="retrain even if a valid trained artifact already exists")
     args = ap.parse_args()
     if args.list:
         for i, sp in LAB_BY_INDEX.items():
@@ -346,6 +347,10 @@ def main():
     for i in idxs:
         spec = LAB_BY_INDEX[i]
         print(f"\n=== lab{i:02d} {spec.name} ({spec.task}) ===", flush=True)
+        if not args.force and A.has_weights(spec.id, spec.area):
+            print("  SKIP: valid trained artifact already exists (use --force to retrain).", flush=True)
+            summary.append((spec.id, "skipped-existing-artifact"))
+            continue
         t0 = time.time()
         try:
             model, metrics, meta = TRAINERS[i](spec)
