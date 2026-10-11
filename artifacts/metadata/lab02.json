@@ -39,13 +39,15 @@
     "accuracy"
   ],
   "metrics": {
-    "accuracy": 0.5375,
-    "f1_macro": 0.5013
+    "accuracy": 0.9324,
+    "f1_macro": 0.9315
   },
   "training": {
-    "epochs": 6,
+    "epochs": 15,
     "batch_size": 128,
-    "train_n": 8000
+    "train_n": 50000,
+    "test_n": 10000,
+    "seed": 42
   },
   "notes": "",
   "trained": true,
@@ -53,9 +55,9 @@
   "model_id": "lab02",
   "weights_file": "artifacts/lab/lab02.pt",
   "weights_bytes": 80701,
-  "saved_at": "2026-10-11T12:34:30Z",
-  "python": "3.13.14",
+  "saved_at": "2026-10-11T13:38:59Z",
+  "python": "3.11.17",
   "torch": "2.14.1+cpu",
-  "platform": "Linux-6.1.155-x86_64-with-glibc2.41",
-  "git_commit": null
+  "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+  "git_commit": "2859ca3b0b7cf347769f9be9b417b24c6ddde9f6"
 }

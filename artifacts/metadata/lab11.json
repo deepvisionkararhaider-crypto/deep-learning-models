@@ -1,0 +1,49 @@
+{
+  "name": "11 \u00b7 GPT-style",
+  "area": "lab",
+  "task": "language_modeling",
+  "framework": "PyTorch",
+  "architecture": "lab:11",
+  "dataset": "20 Newsgroups corpus",
+  "dataset_key": "newsgroups",
+  "classes": [],
+  "n_classes": 0,
+  "input": {
+    "size": 0,
+    "channels": 0,
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "desc": "text prompt -> tokens"
+  },
+  "outputs": "next-token logits",
+  "metric_names": [
+    "perplexity"
+  ],
+  "metrics": {
+    "perplexity": 11.36
+  },
+  "training": {
+    "epochs": 4,
+    "batch_size": 64,
+    "length": 96
+  },
+  "notes": "",
+  "trained": true,
+  "artifact_version": "2.0.0",
+  "model_id": "lab11",
+  "weights_file": "artifacts/lab/lab11.pt",
+  "weights_bytes": 778763,
+  "saved_at": "2026-10-11T13:39:22Z",
+  "python": "3.11.17",
+  "torch": "2.14.1+cpu",
+  "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+  "git_commit": "2859ca3b0b7cf347769f9be9b417b24c6ddde9f6"
+}

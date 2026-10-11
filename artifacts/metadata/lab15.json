@@ -1,0 +1,53 @@
+{
+  "name": "15 \u00b7 U-Net",
+  "area": "lab",
+  "task": "segmentation",
+  "framework": "PyTorch",
+  "architecture": "lab:15",
+  "dataset": "MNIST foreground segmentation",
+  "dataset_key": "mnist_seg",
+  "classes": [
+    "background",
+    "foreground"
+  ],
+  "n_classes": 2,
+  "input": {
+    "size": 28,
+    "channels": 1,
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "desc": "28x28 grayscale image"
+  },
+  "outputs": "28x28 binary mask",
+  "metric_names": [
+    "dice",
+    "iou"
+  ],
+  "metrics": {
+    "dice": 0.8628,
+    "iou": 0.7587
+  },
+  "training": {
+    "epochs": 6,
+    "loss": "bce_dice"
+  },
+  "notes": "",
+  "trained": true,
+  "artifact_version": "2.0.0",
+  "model_id": "lab15",
+  "weights_file": "artifacts/lab/lab15.pt",
+  "weights_bytes": 7805,
+  "saved_at": "2026-10-11T15:03:40Z",
+  "python": "3.11.17",
+  "torch": "2.14.1+cpu",
+  "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+  "git_commit": "2859ca3b0b7cf347769f9be9b417b24c6ddde9f6"
+}
