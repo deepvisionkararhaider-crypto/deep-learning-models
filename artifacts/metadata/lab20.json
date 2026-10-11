@@ -1,0 +1,57 @@
+{
+  "name": "20 \u00b7 GNN",
+  "area": "lab",
+  "task": "graph_classification",
+  "framework": "PyTorch",
+  "architecture": "lab:20",
+  "dataset": "Cora citation network",
+  "dataset_key": "cora",
+  "classes": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
+  ],
+  "n_classes": 7,
+  "input": {
+    "size": 0,
+    "channels": 0,
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "desc": "1433-dim node features + adjacency"
+  },
+  "outputs": "7 class probabilities",
+  "metric_names": [
+    "accuracy"
+  ],
+  "metrics": {
+    "accuracy": 0.2269
+  },
+  "training": {
+    "epochs": 60,
+    "train_n": 1624,
+    "test_n": 542
+  },
+  "notes": "",
+  "trained": true,
+  "artifact_version": "2.0.0",
+  "model_id": "lab20",
+  "weights_file": "artifacts/lab/lab20.pt",
+  "weights_bytes": 388157,
+  "saved_at": "2026-10-11T12:39:46Z",
+  "python": "3.13.14",
+  "torch": "2.14.1+cpu",
+  "platform": "Linux-6.1.155-x86_64-with-glibc2.41",
+  "git_commit": null
+}

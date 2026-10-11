@@ -1,0 +1,52 @@
+{
+  "name": "08 \u00b7 GAN (discriminator)",
+  "area": "lab",
+  "task": "binary_classification",
+  "framework": "PyTorch",
+  "architecture": "lab:8",
+  "dataset": "MNIST handwritten digits",
+  "dataset_key": "mnist",
+  "classes": [
+    "generated",
+    "real"
+  ],
+  "n_classes": 2,
+  "input": {
+    "size": 28,
+    "channels": 1,
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "desc": "28x28 grayscale image"
+  },
+  "outputs": "real/fake score",
+  "metric_names": [
+    "accuracy"
+  ],
+  "metrics": {
+    "real_score_mean": 0.824,
+    "accuracy": 0.824
+  },
+  "training": {
+    "epochs": 8,
+    "note": "discriminator artifact; generator trained jointly"
+  },
+  "notes": "",
+  "trained": true,
+  "artifact_version": "2.0.0",
+  "model_id": "lab08",
+  "weights_file": "artifacts/lab/lab08.pt",
+  "weights_bytes": 807177,
+  "saved_at": "2026-10-11T12:34:46Z",
+  "python": "3.13.14",
+  "torch": "2.14.1+cpu",
+  "platform": "Linux-6.1.155-x86_64-with-glibc2.41",
+  "git_commit": null
+}

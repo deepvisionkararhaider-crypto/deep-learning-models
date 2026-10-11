@@ -1,0 +1,49 @@
+{
+  "name": "17 \u00b7 Siamese",
+  "area": "lab",
+  "task": "metric_learning",
+  "framework": "PyTorch",
+  "architecture": "lab:17",
+  "dataset": "MNIST handwritten digits",
+  "dataset_key": "mnist",
+  "classes": [],
+  "n_classes": 0,
+  "input": {
+    "size": 28,
+    "channels": 1,
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "desc": "two 28x28 grayscale images"
+  },
+  "outputs": "embedding distance",
+  "metric_names": [
+    "pair_accuracy"
+  ],
+  "metrics": {
+    "pair_accuracy": 0.948
+  },
+  "training": {
+    "epochs": 6,
+    "loss": "contrastive"
+  },
+  "notes": "",
+  "trained": true,
+  "threshold": 1.088742971420288,
+  "artifact_version": "2.0.0",
+  "model_id": "lab17",
+  "weights_file": "artifacts/lab/lab17.pt",
+  "weights_bytes": 222781,
+  "saved_at": "2026-10-11T12:39:09Z",
+  "python": "3.13.14",
+  "torch": "2.14.1+cpu",
+  "platform": "Linux-6.1.155-x86_64-with-glibc2.41",
+  "git_commit": null
+}

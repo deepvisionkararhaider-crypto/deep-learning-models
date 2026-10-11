@@ -1,0 +1,56 @@
+{
+  "name": "10 \u00b7 BERT-style",
+  "area": "lab",
+  "task": "text_classification",
+  "framework": "PyTorch",
+  "architecture": "lab:10",
+  "dataset": "20 Newsgroups (4 classes)",
+  "dataset_key": "newsgroups",
+  "classes": [
+    "comp.graphics",
+    "sci.space",
+    "rec.sport.baseball",
+    "talk.politics.misc"
+  ],
+  "n_classes": 4,
+  "input": {
+    "size": 0,
+    "channels": 0,
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "desc": "text -> 64 tokens"
+  },
+  "outputs": "4 class probabilities",
+  "metric_names": [
+    "accuracy"
+  ],
+  "metrics": {
+    "accuracy": 0.0
+  },
+  "training": {
+    "epochs": 4,
+    "batch_size": 64,
+    "train_n": 0,
+    "length": 64,
+    "vocab": 4096
+  },
+  "notes": "",
+  "trained": true,
+  "artifact_version": "2.0.0",
+  "model_id": "lab10",
+  "weights_file": "artifacts/lab/lab10.pt",
+  "weights_bytes": 1325264,
+  "saved_at": "2026-10-11T12:34:48Z",
+  "python": "3.13.14",
+  "torch": "2.14.1+cpu",
+  "platform": "Linux-6.1.155-x86_64-with-glibc2.41",
+  "git_commit": null
+}

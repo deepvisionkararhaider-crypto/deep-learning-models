@@ -1,0 +1,61 @@
+{
+  "name": "13 \u00b7 DenseNet",
+  "area": "lab",
+  "task": "classification",
+  "framework": "PyTorch",
+  "architecture": "lab:13",
+  "dataset": "MNIST handwritten digits",
+  "dataset_key": "mnist",
+  "classes": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9"
+  ],
+  "n_classes": 10,
+  "input": {
+    "size": 28,
+    "channels": 1,
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "desc": "28x28 grayscale image"
+  },
+  "outputs": "10 class probabilities",
+  "metric_names": [
+    "accuracy"
+  ],
+  "metrics": {
+    "accuracy": 0.371,
+    "f1_macro": 0.3237
+  },
+  "training": {
+    "epochs": 6,
+    "batch_size": 128,
+    "train_n": 8000
+  },
+  "notes": "",
+  "trained": true,
+  "artifact_version": "2.0.0",
+  "model_id": "lab13",
+  "weights_file": "artifacts/lab/lab13.pt",
+  "weights_bytes": 21617,
+  "saved_at": "2026-10-11T12:36:09Z",
+  "python": "3.13.14",
+  "torch": "2.14.1+cpu",
+  "platform": "Linux-6.1.155-x86_64-with-glibc2.41",
+  "git_commit": null
+}

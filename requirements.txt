@@ -1,0 +1,11 @@
+# Streamlit Community Cloud runtime dependencies (inference only).
+# CPU-only PyTorch keeps the image small and avoids CUDA downloads.
+--extra-index-url https://download.pytorch.org/whl/cpu
+streamlit==1.50.0
+numpy>=1.26,<3
+pillow>=10,<12
+torch>=2.2,<3
+torchvision>=0.17,<1
+scikit-learn>=1.4,<2
+scipy>=1.11,<2
+pandas>=2.0,<3

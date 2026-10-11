@@ -1,0 +1,48 @@
+{
+  "name": "06 \u00b7 Autoencoder",
+  "area": "lab",
+  "task": "reconstruction",
+  "framework": "PyTorch",
+  "architecture": "lab:6",
+  "dataset": "MNIST handwritten digits",
+  "dataset_key": "mnist",
+  "classes": [],
+  "n_classes": 0,
+  "input": {
+    "size": 28,
+    "channels": 1,
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "desc": "28x28 grayscale image"
+  },
+  "outputs": "28x28 reconstruction",
+  "metric_names": [
+    "recon_mse"
+  ],
+  "metrics": {
+    "recon_mse": 0.02668
+  },
+  "training": {
+    "epochs": 8,
+    "loss": "mse"
+  },
+  "notes": "",
+  "trained": true,
+  "artifact_version": "2.0.0",
+  "model_id": "lab06",
+  "weights_file": "artifacts/lab/lab06.pt",
+  "weights_bytes": 842993,
+  "saved_at": "2026-10-11T12:34:36Z",
+  "python": "3.13.14",
+  "torch": "2.14.1+cpu",
+  "platform": "Linux-6.1.155-x86_64-with-glibc2.41",
+  "git_commit": null
+}

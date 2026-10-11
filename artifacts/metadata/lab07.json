@@ -1,0 +1,50 @@
+{
+  "name": "07 \u00b7 VAE",
+  "area": "lab",
+  "task": "reconstruction",
+  "framework": "PyTorch",
+  "architecture": "lab:7",
+  "dataset": "MNIST handwritten digits",
+  "dataset_key": "mnist",
+  "classes": [],
+  "n_classes": 0,
+  "input": {
+    "size": 28,
+    "channels": 1,
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "desc": "28x28 grayscale image"
+  },
+  "outputs": "28x28 reconstruction + latent",
+  "metric_names": [
+    "recon_bce",
+    "kl"
+  ],
+  "metrics": {
+    "recon_bce": 0.14114,
+    "kl": 5.4373
+  },
+  "training": {
+    "epochs": 8,
+    "loss": "bce + beta*kl"
+  },
+  "notes": "",
+  "trained": true,
+  "artifact_version": "2.0.0",
+  "model_id": "lab07",
+  "weights_file": "artifacts/lab/lab07.pt",
+  "weights_bytes": 859813,
+  "saved_at": "2026-10-11T12:34:40Z",
+  "python": "3.13.14",
+  "torch": "2.14.1+cpu",
+  "platform": "Linux-6.1.155-x86_64-with-glibc2.41",
+  "git_commit": null
+}

@@ -1,0 +1,43 @@
+name: CI — validation (no training)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install CPU-only runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-train.txt
+
+      - name: Compile all sources
+        run: |
+          python -m compileall -q src scripts app.py tests
+
+      - name: Import the Streamlit entry point
+        run: python -c "import ast; ast.parse(open('app.py').read()); print('app.py parses OK')"
+
+      - name: Registry + architecture tests
+        run: pytest -q tests/test_platform.py
+
+      - name: Verify every artifact (load + inference smoke test)
+        run: python scripts/verify_models.py
+
+      - name: Assert inference modules contain no training code
+        run: |
+          ! grep -R "torch.optim" src/inference.py src/lab_inference.py
+          echo "no optimiser in inference modules: OK"
