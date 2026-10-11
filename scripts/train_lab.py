@@ -34,7 +34,7 @@ from src.models.segmentation import bce_dice_loss, dice_coef, iou_score  # noqa:
 from src.registry import LAB_BY_INDEX, ModelSpec    # noqa: E402
 
 SEED = 42
-MNIST_TRAIN, MNIST_TEST = 8000, 2000
+MNIST_TRAIN, MNIST_TEST = 50000, 10000
 
 
 def set_seed(s=SEED):
@@ -90,7 +90,7 @@ def _mnist_image_model(spec, cls):
     x_tr, y_tr = D.mnist("train", MNIST_TRAIN)
     x_te, y_te = D.mnist("test", MNIST_TEST)
     model = cls(**spec.build_kwargs); opt = torch.optim.Adam(model.parameters(), 1e-3)
-    for ep in range(6):
+    for ep in range(15):
         model.train(); perm = torch.randperm(len(x_tr))
         for i in range(0, len(x_tr), 128):
             idx = perm[i:i + 128]; opt.zero_grad()
@@ -99,7 +99,7 @@ def _mnist_image_model(spec, cls):
     with torch.inference_mode():
         pred = torch.cat([model(x_te[i:i + 512]).argmax(1) for i in range(0, len(x_te), 512)]).numpy()
     m = {"accuracy": round(acc, 4), "f1_macro": round(_macro_f1(y_te.numpy(), pred, 10), 4)}
-    return model, m, _meta(spec, m, {"epochs": 6, "batch_size": 128, "train_n": MNIST_TRAIN})
+    return model, m, _meta(spec, m, {"epochs": 15, "batch_size": 128, "train_n": MNIST_TRAIN, "test_n": MNIST_TEST, "seed": SEED})
 
 
 def train_sequence(spec, cls):
