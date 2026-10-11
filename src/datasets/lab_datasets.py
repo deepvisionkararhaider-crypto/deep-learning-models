@@ -93,14 +93,35 @@ def har(limit: int | None = None):
     """(N,128,9) inertial signals -> 6 activity classes."""
     z = CACHE / "har.zip"
     root = CACHE / "UCI_HAR_Dataset"
-    if not (root / "train" / "X_train.txt").exists():
-        _download(HAR_URL, z)
-        with zipfile.ZipFile(z) as f:
-            f.extractall(CACHE)
+    expected = root / "train" / "X_train.txt"
+    # GitHub runners may retain an incomplete extraction from a failed download.
+    # Re-download/extract unless the expected training file is actually present.
+    if not expected.is_file():
+        CACHE.mkdir(parents=True, exist_ok=True)
+        if not z.is_file() or z.stat().st_size < 1_000_000:
+            z.unlink(missing_ok=True)
+            _download(HAR_URL, z)
+        if not zipfile.is_zipfile(z):
+            z.unlink(missing_ok=True)
+            _download(HAR_URL, z)
+        if not zipfile.is_zipfile(z):
+            raise RuntimeError(f"Downloaded HAR archive is invalid: {z}")
+        with zipfile.ZipFile(z) as archive:
+            bad = archive.testzip()
+            if bad:
+                raise RuntimeError(f"Corrupt HAR archive member: {bad}")
+            archive.extractall(CACHE)
         inner = CACHE / "UCI HAR Dataset"
-        if inner.exists() and not root.exists():
+        if (inner / "train" / "X_train.txt").is_file():
+            if root.exists():
+                import shutil
+                shutil.rmtree(root)
             inner.rename(root)
-    x = np.loadtxt(root / "train" / "X_train.txt", dtype=np.float32)
+        if not expected.is_file():
+            raise FileNotFoundError(
+                f"HAR extraction did not produce {expected}; inspect {z} and the archive layout."
+            )
+    x = np.loadtxt(expected, dtype=np.float32)
     y = np.loadtxt(root / "train" / "y_train.txt", dtype=np.int64) - 1
     # first 9 columns are the raw body-acceleration triaxial means; reshape to 128 steps
     x = x[:, :9].reshape(-1, 128, 9) if x.shape[1] >= 9 else x[:, :9]
