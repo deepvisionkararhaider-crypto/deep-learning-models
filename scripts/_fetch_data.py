@@ -38,15 +38,22 @@ def fetch(url, dest: Path):
         return False
 
 def main(keys):
+    failures = []
     for key in keys:
         info = MANIFEST.get(key)
         if not info:
-            print(f"no manifest for {key}"); continue
+            failures.append(f"{key}: no manifest entry")
+            print(f"FAIL: no manifest entry for {key}", flush=True)
+            continue
         print(f"=== {key}: {info['dataset']}", flush=True)
         for i, f in enumerate(info["files"]):
             dest = CACHE / key / f"{f['split']}-{i}.parquet"
-            fetch(f["url"], dest)
-    print("DONE", flush=True)
+            if not fetch(f["url"], dest):
+                failures.append(f"{key}/{dest.name}")
+    if failures:
+        print("Dataset fetch failures: " + ", ".join(failures), flush=True)
+        raise SystemExit(1)
+    print("DONE: all requested dataset files are available", flush=True)
 
 if __name__ == "__main__":
     keys = sys.argv[1:] or list(MANIFEST)
