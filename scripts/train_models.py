@@ -45,7 +45,9 @@ from src.models.segmentation import bce_dice_loss, dice_coef, iou_score  # noqa:
 from src.registry import BY_ID, CV_MODELS, ModelSpec, build_model  # noqa: E402
 
 SEED = 42
-HEAVY = {"brain_maskrcnn", "plant_maskrcnn"}
+# Mask R-CNN (ResNet-50-FPN) is far too heavy to train on CPU in the ~1 GB sandbox
+# RAM budget; it is gated behind --allow-heavy and the UI reports it honestly.
+HEAVY = {"brain_maskrcnn"}
 
 
 def set_seed(seed: int = SEED):
@@ -149,7 +151,14 @@ def train_classifier(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -
 # --------------------------------------------------------------------------- #
 def train_unet(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -> dict:
     size = spec.input_size
-    data = L.load_plant_seg()
+    # Dispatch on the spec's own dataset: hardcoding one loader would silently
+    # train the brain U-Net on leaf images (and vice versa).
+    if spec.dataset_key == "brain_seg":
+        data = L.load_brain_seg()
+    elif spec.dataset_key == "plant_seg":
+        data = L.load_plant_seg()
+    else:
+        raise ValueError(f"no segmentation loader for {spec.dataset_key}")
     from src.datasets.loaders import SegmentationDataset
     tr = SegmentationDataset(data["train"], size, IMAGENET_MEAN, IMAGENET_STD, train=True)
     va = SegmentationDataset(data["val"], size, IMAGENET_MEAN, IMAGENET_STD, train=False)

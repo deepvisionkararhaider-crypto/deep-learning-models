@@ -22,6 +22,7 @@ from __future__ import annotations
 import io
 import json
 import random
+import urllib.parse
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
@@ -44,18 +45,37 @@ def _manifest() -> dict:
     return {}
 
 
-def files_for(key: str) -> list[Path]:
-    return sorted(CACHE.glob(f"{key}/*.parquet"))
+# The downloaded files are named ``<split>-<index>.parquet`` from the HuggingFace
+# datasets-server split names, which are not spelled consistently across datasets
+# (train / validation / valid / val / test). Canonicalise them so a loader can ask
+# for one split and be sure it never sees rows from another (that would leak the
+# test set into training and make every reported metric meaningless).
+_SPLIT_ALIASES = {"train": "train", "training": "train",
+                  "validation": "validation", "valid": "validation", "val": "validation",
+                  "test": "test"}
+
+
+def split_of(fp: Path) -> str:
+    """Canonical split for a cached parquet file (``valid-2.parquet`` -> ``validation``)."""
+    return _SPLIT_ALIASES.get(fp.stem.split("-")[0].lower(), "train")
+
+
+def files_for(key: str, split: str | None = None) -> list[Path]:
+    files = sorted(CACHE.glob(f"{key}/*.parquet"))
+    if split is None:
+        return files
+    want = _SPLIT_ALIASES.get(split.lower(), split.lower())
+    return [f for f in files if split_of(f) == want]
 
 
 def available(key: str) -> bool:
     return bool(files_for(key))
 
 
-def _rows(key: str, columns: list[str] | None = None) -> Iterator[dict]:
+def _rows(key: str, columns: list[str] | None = None, split: str | None = None) -> Iterator[dict]:
     import pyarrow.parquet as pq
 
-    for fp in files_for(key):
+    for fp in files_for(key, split):
         pf = pq.ParquetFile(fp)
         for batch in pf.iter_batches(batch_size=64, columns=columns):
             d = batch.to_pydict()
@@ -68,18 +88,30 @@ _IMG_FETCH_CACHE: dict[str, bytes] = {}
 
 
 def _resolve_hf_path(path: str) -> str | None:
-    """``hf://datasets/REPO@REV/FILE`` -> a public resolve URL (path-only datasets)."""
+    """``hf://datasets/<owner>/<name>@<rev>/<file path>`` -> a public resolve URL.
+
+    File paths in these datasets contain spaces and other characters that are
+    illegal in a URL, so the file component is percent-encoded (keeping ``/``).
+    """
     if not path.startswith("hf://"):
         return None
     body = path[len("hf://"):]
     kind, _, rest = body.partition("/")
     if kind != "datasets":
         return None
-    repo, _, tail = rest.partition("/")
-    rev, sep, filepart = tail.partition("/")
-    if not sep:
+    parts = rest.split("/")
+    if len(parts) < 3:
         return None
-    return f"https://huggingface.co/datasets/{repo}/resolve/{rev}/{filepart}"
+    owner, name = parts[0], parts[1]
+    rev = "main"
+    if "@" in name:
+        name, _, rev = name.partition("@")
+    repo = f"{owner}/{name}"
+    filepart = "/".join(parts[2:])
+    if not rev:
+        rev = "main"
+    return (f"https://huggingface.co/datasets/{repo}/resolve/"
+            f"{urllib.parse.quote(rev, safe='')}/{urllib.parse.quote(filepart)}")
 
 
 def _img_bytes(cell: Any) -> bytes:
@@ -114,7 +146,10 @@ def _img_bytes(cell: Any) -> bytes:
 # --------------------------------------------------------------------------- #
 # classification
 # --------------------------------------------------------------------------- #
-BRAIN_MRI_CLASSES = ["glioma", "meningioma", "notumor", "pituitary"]
+# Class names are taken from each dataset's own feature metadata (HuggingFace
+# ``ClassLabel`` names), not invented. Where a dataset ships un-named numeric
+# labels we say so explicitly instead of guessing a clinical meaning.
+BRAIN_MRI_CLASSES = ["glioma", "meningioma", "no-tumor", "pituitary"]   # PranomVignesh/MRI-Images-of-Brain-Tumor
 PLANT_CLASSES = [
     "Apple___Apple_scab", "Apple___Black_rot", "Apple___Cedar_apple_rust", "Apple___healthy",
     "Corn___Cercospora_leaf_spot", "Corn___Common_rust", "Corn___Northern_Leaf_Blight", "Corn___healthy",
@@ -125,11 +160,24 @@ PLANT_CLASSES = [
     "Tomato___Tomato_Yellow_Leaf_Curl_Virus", "Tomato___Tomato_mosaic_virus", "Tomato___healthy",
 ]
 
+# Detection / instance-segmentation class names, taken verbatim from each dataset's
+# own ClassLabel feature metadata. brain_det ships un-named numeric labels (no
+# ClassLabel), so its classes are labelled explicitly as numeric ids.
+BRAIN_DET_CLASSES = ["label_0", "label_1"]                      # mmenendezg/brain-tumor-object-detection
+COTTON_DET_CLASSES = ["cotton-plant-disease", "dc"]             # Francesco/cotton-plant-disease
+BRAIN_INSTSEG_CLASSES = ["Tumor", "0"]                          # dwb2023/... category ids 1,2
+
 
 def _collect_classification(key: str, split: str | None, limit: int | None,
                             seed: int) -> list[tuple[bytes, int]]:
+    """Collect (image_bytes, label) rows for ONE split.
+
+    ``split`` must be honoured: reading every cached parquet file regardless of
+    the requested split would hand the trainer the test rows as well, so every
+    reported metric would be contaminated by train/test leakage.
+    """
     out: list[tuple[bytes, int]] = []
-    for r in _rows(key, ["image", "label"]):
+    for r in _rows(key, ["image", "label"], split=split):
         out.append((_img_bytes(r["image"]), int(r["label"])))
         if limit and len(out) >= limit:
             break
@@ -234,26 +282,131 @@ def load_detection(key: str, limit: int | None = None) -> dict[str, list[dict]]:
 # segmentation
 # --------------------------------------------------------------------------- #
 def load_plant_seg(limit: int | None = None, seed: int = 42) -> dict[str, list[tuple[bytes, bytes]]]:
-    """Binary leaf-disease segmentation: returns {split: [(image_bytes, mask_png_bytes)]}."""
+    """Leaf-disease segmentation: returns {split: [(image_bytes, mask_png_bytes)]}.
+
+    Uses the dataset's own train/validation/test split. The masks are **class-index
+    encoded** (0 = background, 38 = disease), not a 0/255 image mask, so they are
+    thresholded with ``> 0`` by :func:`mask_array`.
+    """
     if not available("plant_seg"):
         raise FileNotFoundError("plant_seg not cached; run scripts/_fetch_data.py plant_seg")
-    items: list[tuple[bytes, bytes]] = []
-    for r in _rows("plant_seg", ["image", "mask"]):
-        items.append((_img_bytes(r["image"]), _img_bytes(r["mask"])))
-        if limit and len(items) >= limit:
-            break
-    rng = random.Random(seed)
-    rng.shuffle(items)
-    n = len(items)
-    return {"train": items[: int(n * 0.8)], "val": items[int(n * 0.8): int(n * 0.9)],
-            "test": items[int(n * 0.9):]}
+    out: dict[str, list[tuple[bytes, bytes]]] = {"train": [], "val": [], "test": []}
+    for split in ("train", "val", "test"):
+        for r in _rows("plant_seg", ["image", "mask"], split=split):
+            out[split].append((_img_bytes(r["image"]), _img_bytes(r["mask"])))
+            if limit and len(out[split]) >= limit:
+                break
+    for k in out:
+        random.Random(seed).shuffle(out[k])
+    return out
 
 
 def mask_array(mask_bytes: bytes, size: int) -> np.ndarray:
-    """Decode a mask PNG into a binary (size, size) float32 array."""
+    """Decode a segmentation mask into a binary (size, size) float32 array.
+
+    Handles both conventions seen in these datasets: a 0/255 image mask (``> 127``)
+    and a class-index mask where the foreground is any non-zero label (``> 0``).
+    """
     m = Image.open(io.BytesIO(mask_bytes)).convert("L")
     m = m.resize((size, size), Image.NEAREST)
-    return (np.asarray(m, dtype=np.float32) > 127).astype(np.float32)
+    arr = np.asarray(m, dtype=np.float32)
+    if arr.max() > 127:            # 0/255-style mask
+        return (arr > 127).astype(np.float32)
+    return (arr > 0).astype(np.float32)
+
+
+# --------------------------------------------------------------------------- #
+# instance segmentation (COCO polygons)
+# --------------------------------------------------------------------------- #
+# Category ids present in dwb2023/brain-tumor-image-dataset-semantic-segmentation.
+# The registry declares two classes; map the source ids onto 0-based indices.
+INSTSEG_BRAIN_CLASSES = ["glioma", "meningioma"]
+
+
+def _polygons_to_mask(segmentation: Any, width: int, height: int) -> np.ndarray:
+    """Rasterise COCO polygon list(s) into a (H, W) uint8 mask."""
+    from PIL import ImageDraw
+
+    canvas = Image.new("L", (width, height), 0)
+    draw = ImageDraw.Draw(canvas)
+    if not isinstance(segmentation, (list, tuple)):
+        return np.zeros((height, width), np.uint8)
+    polys = segmentation
+    if polys and not isinstance(polys[0], (list, tuple)):
+        polys = [polys]                      # single flat polygon -> [[x0,y0,...]]
+    for poly in polys:
+        try:
+            pts = [(float(poly[k]), float(poly[k + 1])) for k in range(0, len(poly) - 1, 2)]
+        except Exception:                    # noqa: BLE001
+            continue
+        if len(pts) >= 3:
+            draw.polygon(pts, fill=1)
+    return np.asarray(canvas, dtype=np.uint8)
+
+
+def load_instance_segmentation(key: str = "brain_instseg", limit: int | None = None
+                               ) -> dict[str, list[dict]]:
+    """Return {split: [ {image, boxes(N,4 px xyxy), labels(N,), masks(N,H,W), width, height} ]}.
+
+    Reads genuine COCO polygon annotations and rasterises them into per-instance
+    masks. Annotations are grouped by source image (``file_name``); labels are
+    remapped from the dataset's category ids to 0-based class indices.
+    """
+    if not available(key):
+        raise FileNotFoundError(f"{key} not cached; run scripts/_fetch_data.py {key}")
+    cols = ["file_name", "image", "category_id", "bbox", "segmentation", "width", "height"]
+    out: dict[str, list[dict]] = {"train": [], "val": [], "test": []}
+    for split in ("train", "val", "test"):
+        grouped: dict[str, dict] = {}
+        order: list[str] = []
+        for r in _rows(key, cols, split=split):
+            fn = r["file_name"]
+            if fn not in grouped:
+                b = _img_bytes(r["image"])
+                img = decode_image(b)
+                w = int(r.get("width") or img.size[0])
+                h = int(r.get("height") or img.size[1])
+                grouped[fn] = {"image": b, "boxes": [], "labels": [], "masks": [],
+                               "width": w, "height": h}
+                order.append(fn)
+            g = grouped[fn]
+            bb = r["bbox"]
+            if bb is not None and len(bb) == 4:
+                x, y, bw, bh = [float(v) for v in bb]
+                g["boxes"].append([x, y, x + bw, y + bh])
+            g["labels"].append(int(r["category_id"]) - 1)     # 1-based -> 0-based
+            g["masks"].append(_polygons_to_mask(r["segmentation"], g["width"], g["height"]))
+            if limit and len(order) >= limit:
+                break
+        for fn in order:
+            g = grouped[fn]
+            g["boxes"] = np.asarray(g["boxes"], dtype=np.float32).reshape(-1, 4)
+            g["labels"] = np.asarray(g["labels"], dtype=np.int64).reshape(-1)
+            g["masks"] = (np.stack(g["masks"]) if g["masks"]
+                          else np.zeros((0, g["height"], g["width"]), np.uint8))
+            out[split].append(g)
+    return out
+
+
+def load_brain_seg(limit: int | None = None) -> dict[str, list[tuple[bytes, bytes]]]:
+    """Binary brain-tumour segmentation masks derived from the COCO polygons.
+
+    The brain-tumour dataset is only published with per-instance polygons, so the
+    binary U-Net target is produced by unioning every instance polygon of an image
+    into one foreground mask. The image is re-encoded to PNG bytes so the existing
+    :class:`SegmentationDataset` can consume it unchanged.
+    """
+    inst = load_instance_segmentation("brain_instseg", limit=limit)
+    out: dict[str, list[tuple[bytes, bytes]]] = {"train": [], "val": [], "test": []}
+    for split in ("train", "val", "test"):
+        for g in inst[split]:
+            union = (g["masks"].sum(0) > 0).astype(np.uint8) if g["masks"].size else \
+                np.zeros((g["height"], g["width"]), np.uint8)
+            mask_img = Image.fromarray(union * 255)
+            buf = io.BytesIO()
+            mask_img.save(buf, format="PNG")
+            out[split].append((g["image"], buf.getvalue()))
+    return out
 
 
 # --------------------------------------------------------------------------- #

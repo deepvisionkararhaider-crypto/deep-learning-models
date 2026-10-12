@@ -45,10 +45,15 @@ class ModelSpec:
     build_kwargs: dict[str, Any] = field(default_factory=dict)
     notes: str = ""
     lab: bool = False
+    blocked: str = ""               # non-empty => cannot be trained; the reason
 
     @property
     def is_cv(self) -> bool:
         return self.area in ("medical", "agriculture")
+
+    @property
+    def is_blocked(self) -> bool:
+        return bool(self.blocked)
 
 
 # --------------------------------------------------------------------------- #
@@ -110,26 +115,29 @@ MEDICAL: list[ModelSpec] = [
         classes=L.BRAIN_MRI_CLASSES, input_desc="224x224 RGB MRI slice",
         input_size=224, in_ch=3, outputs="4 class probabilities",
         metric_names=["accuracy", "precision_macro", "recall_macro", "f1_macro"],
-        builder="vit", notes="ViT-B/16 ImageNet-pretrained backbone, fine-tuned head."),
+        builder="vit", notes="CompactViT trained from scratch (16x16 patches, dim 192). "
+                             "torchvision ViT-B/16 (344 MB) exceeds the GitHub 100 MB file limit."),
     ModelSpec(
         id="brain_unet", name="U-Net (brain tumor segmentation)", area="medical",
         task="segmentation", framework="PyTorch (from scratch)", dataset_key="brain_seg",
-        dataset_name="Brain tumor semantic segmentation (MRI)",
+        dataset_name="Brain tumor segmentation (instance polygons unioned to a binary mask)",
         classes=["background", "tumor"], input_desc="224x224 RGB MRI slice",
         input_size=224, in_ch=3, outputs="224x224 binary tumor mask",
-        metric_names=["dice", "iou"], builder="unet"),
+        metric_names=["dice", "iou"], builder="unet",
+        notes="Binary target derived from the source dataset's COCO tumour polygons."),
     ModelSpec(
         id="brain_yolo", name="YOLO-style (brain tumor detection)", area="medical",
         task="detection", framework="PyTorch (anchor-free, from scratch)",
         dataset_key="brain_det", dataset_name="Brain tumor detection (COCO boxes)",
-        classes=["tumor"], input_desc="448x448 RGB MRI slice", input_size=448, in_ch=3,
+        classes=L.BRAIN_DET_CLASSES, input_desc="448x448 RGB MRI slice", input_size=448, in_ch=3,
         outputs="boxes + objectness", metric_names=["mAP@50"], builder="yolo",
-        build_kwargs={"grid": 14}),
+        build_kwargs={"grid": 14},
+        notes="Source dataset ships two un-named numeric labels; reported as label_0/label_1."),
     ModelSpec(
         id="brain_maskrcnn", name="Mask R-CNN (brain tumor instances)", area="medical",
         task="instance_segmentation", framework="PyTorch (torchvision)",
         dataset_key="brain_instseg", dataset_name="Brain tumor instance segmentation (COCO polygons)",
-        classes=["tumor"], input_desc="variable-size MRI slice (resized to 256x256)",
+        classes=L.BRAIN_INSTSEG_CLASSES, input_desc="variable-size MRI slice (resized to 256x256)",
         input_size=256, in_ch=3, outputs="instances: box + label + mask",
         metric_names=["mask_AP@50", "box_AP@50"], builder="maskrcnn"),
 ]
@@ -168,16 +176,20 @@ AGRI: list[ModelSpec] = [
         id="plant_yolo", name="YOLO-style (cotton leaf detection)", area="agriculture",
         task="detection", framework="PyTorch (anchor-free, from scratch)",
         dataset_key="cotton_det", dataset_name="Cotton leaf disease detection (COCO boxes)",
-        classes=["disease"], input_desc="448x448 RGB leaf image", input_size=448, in_ch=3,
+        classes=L.COTTON_DET_CLASSES, input_desc="448x448 RGB leaf image", input_size=448, in_ch=3,
         outputs="boxes + objectness", metric_names=["mAP@50"], builder="yolo",
         build_kwargs={"grid": 14}),
     ModelSpec(
-        id="plant_maskrcnn", name="Mask R-CNN (cotton leaf instances)", area="agriculture",
+        id="plant_maskrcnn", name="Mask R-CNN (leaf instances)", area="agriculture",
         task="instance_segmentation", framework="PyTorch (torchvision)",
-        dataset_key="cotton_instseg", dataset_name="Cotton leaf disease instance segmentation",
-        classes=["disease"], input_desc="variable-size leaf image (resized to 256x256)",
+        dataset_key="plant_instseg", dataset_name="Leaf instance segmentation (COCO polygons)",
+        classes=["leaf", "disease"], input_desc="variable-size leaf image (resized to 256x256)",
         input_size=256, in_ch=3, outputs="instances: box + label + mask",
-        metric_names=["mask_AP@50", "box_AP@50"], builder="maskrcnn"),
+        metric_names=["mask_AP@50", "box_AP@50"], builder="maskrcnn",
+        blocked="No agriculture instance-segmentation dataset is available on the HuggingFace "
+                "datasets-server parquet mirror. daiv05/corn-leaf-instance-segmentation exists "
+                "but has no parquet conversion (0 rows, config-size failed), so it cannot be "
+                "fetched offline. This model has no trained weights and is not selectable."),
 ]
 
 # --------------------------------------------------------------------------- #

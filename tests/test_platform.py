@@ -107,3 +107,54 @@ def test_verify_script_runs():
     assert (ROOT / "scripts" / "verify_models.py").exists()
     assert (ROOT / "scripts" / "train_models.py").exists()
     assert (ROOT / "scripts" / "train_lab.py").exists()
+
+
+# --------------------------------------------------------------------------- #
+# regression tests for the data-pipeline and reporting fixes
+# --------------------------------------------------------------------------- #
+def test_plant_maskrcnn_is_honestly_blocked():
+    """The agriculture instance-seg model must be reported BLOCKED, not faked."""
+    from src.registry import BY_ID, CV_MODELS
+    spec = BY_ID["plant_maskrcnn"]
+    assert spec.is_blocked and spec.blocked, "plant_maskrcnn must carry a blocked reason"
+    assert len(CV_MODELS) == 12, "all six CV types must remain in both domains"
+    # A blocked model must never claim weights.
+    assert not A.has_weights(spec.id, spec.area)
+
+
+def test_cv_classes_match_dataset_labels():
+    """Registry classes must match the real label cardinality of each dataset."""
+    from src.datasets import loaders as L
+    from src.registry import BY_ID
+    assert len(BY_ID["brain_yolo"].classes) == 2      # brain_det: label 0/1
+    assert len(BY_ID["plant_yolo"].classes) == 2      # cotton_det: 2 ClassLabel names
+    assert len(BY_ID["brain_maskrcnn"].classes) == 2  # brain_instseg: 2 categories
+    assert len(BY_ID["brain_cnn"].classes) == 4       # brain_mri: 4 ClassLabel names
+    assert len(BY_ID["plant_cnn"].classes) == len(L.PLANT_CLASSES)
+
+
+def test_har_split_is_official_and_disjoint():
+    """HAR must use the official train/test split, and a scaler must be exposed."""
+    from src.datasets import lab_datasets as D
+    try:
+        x_tr, y_tr = D.har("train")
+        x_te, y_te = D.har("test")
+    except FileNotFoundError:
+        pytest.skip("HAR not cached in this environment")
+    assert x_tr.shape[1:] == (128, 9) and x_te.shape[1:] == (128, 9)
+    assert len(x_tr) != len(x_te), "official HAR train/test sizes differ (7352 vs 2947)"
+    mean, std = D.har_scaler()
+    assert mean.shape == (9,) and std.shape == (9,)
+    assert (std > 0).all()
+
+
+def test_mask_array_handles_class_index_masks():
+    """plant_seg masks are class-index encoded (0/38); >127 would yield empty masks."""
+    import io
+    import numpy as np
+    from PIL import Image
+    from src.datasets import loaders as L
+    arr = np.zeros((10, 10), dtype=np.uint8); arr[3:7, 3:7] = 38
+    buf = io.BytesIO(); Image.fromarray(arr).save(buf, format="PNG")
+    m = L.mask_array(buf.getvalue(), 10)
+    assert m.shape == (10, 10) and m.max() == 1.0 and m.sum() > 0

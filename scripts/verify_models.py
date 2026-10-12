@@ -35,6 +35,10 @@ def _probe_image(size: int) -> Image.Image:
 
 
 def verify_cv(spec) -> str:
+    if spec.is_blocked:
+        # No dataset exists, so there is nothing to train or verify. Report it as
+        # BLOCKED rather than ARCH-ONLY so it is never mistaken for "just untrained".
+        return "BLOCKED"
     if not A.has_weights(spec.id, spec.area):
         build_model(spec)()          # architecture must at least construct
         return "ARCH-ONLY"
@@ -89,7 +93,7 @@ def verify_lab(spec) -> str:
 
 
 def main() -> int:
-    counts = {"READY": 0, "ARCH-ONLY": 0, "INFER-FAILED": 0}
+    counts = {"READY": 0, "ARCH-ONLY": 0, "INFER-FAILED": 0, "BLOCKED": 0}
     rows = []
     for spec in ALL_MODELS:
         try:
@@ -108,7 +112,8 @@ def main() -> int:
     for mid, name, state, err in rows:
         print(f"{mid:18s} {name[:34]:34s} {state} {err[:40]}")
     print("-" * 78)
-    print(f"READY={counts['READY']}  ARCH-ONLY={counts['ARCH-ONLY']}  INFER-FAILED={counts['INFER-FAILED']}")
+    print(f"READY={counts['READY']}  ARCH-ONLY={counts['ARCH-ONLY']}  "
+          f"BLOCKED={counts['BLOCKED']}  INFER-FAILED={counts['INFER-FAILED']}")
     return 1 if counts["INFER-FAILED"] or counts["ARCH-ONLY"] else 0
 
 
