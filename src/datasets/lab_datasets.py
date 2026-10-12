@@ -89,42 +89,116 @@ HAR_URL = ("https://archive.ics.uci.edu/static/public/240/"
 HAR_CLASSES = ["walking", "walking_upstairs", "walking_downstairs", "sitting", "standing", "laying"]
 
 
-def har(limit: int | None = None):
-    """(N,128,9) inertial signals -> 6 activity classes."""
-    z = CACHE / "har.zip"
+# The nine raw inertial-signal channels the UCI HAR release ships under
+# train/Inertial Signals/*_train.txt, each stored as (n_windows, 128).
+HAR_CHANNELS = ["body_acc_x", "body_acc_y", "body_acc_z",
+                "body_gyro_x", "body_gyro_y", "body_gyro_z",
+                "total_acc_x", "total_acc_y", "total_acc_z"]
+
+
+def _unzip_recursive(archive_path: Path, dest: Path) -> None:
+    """Extract a zip, transparently unwrapping any nested zip members.
+
+    The UCI HAR download is a **zip inside a zip**: the outer archive contains
+    ``UCI HAR Dataset.zip``, which itself contains the real ``UCI HAR Dataset/``
+    tree. A single ``extractall`` therefore produces no usable data.
+    """
+    with zipfile.ZipFile(archive_path) as archive:
+        bad = archive.testzip()
+        if bad:
+            raise RuntimeError(f"Corrupt HAR archive member: {bad}")
+        archive.extractall(dest)
+        nested = [n for n in archive.namelist() if n.lower().endswith(".zip")]
+    for member in nested:
+        inner = dest / member
+        if inner.is_file():
+            _unzip_recursive(inner, dest)
+
+
+def _extract_har(z: Path) -> Path:
+    """Return the directory holding ``train/Inertial Signals`` for UCI HAR."""
     root = CACHE / "UCI_HAR_Dataset"
-    expected = root / "train" / "X_train.txt"
-    # GitHub runners may retain an incomplete extraction from a failed download.
-    # Re-download/extract unless the expected training file is actually present.
-    if not expected.is_file():
-        CACHE.mkdir(parents=True, exist_ok=True)
-        if not z.is_file() or z.stat().st_size < 1_000_000:
-            z.unlink(missing_ok=True)
-            _download(HAR_URL, z)
-        if not zipfile.is_zipfile(z):
-            z.unlink(missing_ok=True)
-            _download(HAR_URL, z)
-        if not zipfile.is_zipfile(z):
-            raise RuntimeError(f"Downloaded HAR archive is invalid: {z}")
-        with zipfile.ZipFile(z) as archive:
-            bad = archive.testzip()
-            if bad:
-                raise RuntimeError(f"Corrupt HAR archive member: {bad}")
-            archive.extractall(CACHE)
-        inner = CACHE / "UCI HAR Dataset"
-        if (inner / "train" / "X_train.txt").is_file():
-            if root.exists():
-                import shutil
-                shutil.rmtree(root)
-            inner.rename(root)
-        if not expected.is_file():
-            raise FileNotFoundError(
-                f"HAR extraction did not produce {expected}; inspect {z} and the archive layout."
-            )
-    x = np.loadtxt(expected, dtype=np.float32)
-    y = np.loadtxt(root / "train" / "y_train.txt", dtype=np.int64) - 1
-    # first 9 columns are the raw body-acceleration triaxial means; reshape to 128 steps
-    x = x[:, :9].reshape(-1, 128, 9) if x.shape[1] >= 9 else x[:, :9]
+    if (root / "train" / "Inertial Signals").is_dir():
+        return root
+
+    CACHE.mkdir(parents=True, exist_ok=True)
+    if not z.is_file() or z.stat().st_size < 1_000_000 or not zipfile.is_zipfile(z):
+        z.unlink(missing_ok=True)
+        _download(HAR_URL, z)
+    if not zipfile.is_zipfile(z):
+        raise RuntimeError(f"Downloaded HAR archive is invalid: {z}")
+
+    _unzip_recursive(z, CACHE)
+
+    # Locate the extracted tree regardless of the exact folder casing/spacing.
+    found: Path | None = None
+    for cand in CACHE.rglob("X_train.txt"):
+        parent = cand.parent
+        if parent.name == "train" and (parent.parent / "test").is_dir():
+            found = parent.parent
+            break
+    if found is None:
+        raise FileNotFoundError(
+            f"HAR extraction did not yield a train/X_train.txt tree under {CACHE}; "
+            f"inspect {z} and the archive layout."
+        )
+    if found.resolve() != root.resolve():
+        import shutil
+        if root.exists():
+            shutil.rmtree(root)
+        shutil.move(str(found), str(root))
+    return root
+
+
+def _har_split(split: str) -> tuple[np.ndarray, np.ndarray]:
+    """Raw (N,128,9) inertial windows + labels for one official HAR split."""
+    root = _extract_har(CACHE / "har.zip")
+    sig = root / split / "Inertial Signals"
+    y_fp = root / split / f"y_{split}.txt"
+    if not sig.is_dir() or not y_fp.is_file():
+        raise FileNotFoundError(f"HAR split '{split}' missing under {root}")
+    y = np.loadtxt(y_fp, dtype=np.int64) - 1
+
+    channels = []
+    for ch in HAR_CHANNELS:
+        fp = sig / f"{ch}_{split}.txt"
+        if not fp.is_file():
+            raise FileNotFoundError(f"HAR channel missing: {fp}")
+        channels.append(np.loadtxt(fp, dtype=np.float32))
+    x = np.stack(channels, axis=-1)                 # (N, 128, 9)
+    if x.shape[1] != 128 or x.shape[2] != 9:
+        raise RuntimeError(f"unexpected HAR window shape {x.shape}, expected (N,128,9)")
+    n = min(len(x), len(y))
+    return np.ascontiguousarray(x[:n]), y[:n]
+
+
+def har_scaler() -> tuple[np.ndarray, np.ndarray]:
+    """Per-channel mean/std over the *train* split (shape (9,), (9,)).
+
+    Raw inertial signals have wildly different scales per axis (body-gyro is ~0.1,
+    total-acc is ~9.8); feeding them unscaled is why the RNN/LSTM/GRU models were
+    previously near chance. The same constants are written to the artifact and
+    applied at inference so train/serve preprocessing cannot drift.
+    """
+    x, _ = _har_split("train")
+    flat = x.reshape(-1, x.shape[-1])
+    mean = flat.mean(axis=0)
+    std = flat.std(axis=0) + 1e-6
+    return mean.astype(np.float32), std.astype(np.float32)
+
+
+def har(split: str = "train", limit: int | None = None):
+    """(N,128,9) raw inertial-signal windows -> 6 activity classes.
+
+    Reads the nine triaxial Inertial Signals channels (body acc/gyro + total acc),
+    each ``(N,128)`` in the official UCI layout, and stacks them to ``(N,128,9)``.
+    The engineered ``X_train.txt`` (561 features) is deliberately *not* used: its
+    column count cannot be reshaped into a 128x9 window. Callers should normalise
+    with :func:`har_scaler`; the constants are stored in the artifact metadata.
+    """
+    if split not in ("train", "test"):
+        raise ValueError(f"split must be 'train' or 'test', got {split!r}")
+    x, y = _har_split(split)
     if limit:
         x, y = x[:limit], y[:limit]
     return torch.from_numpy(x), torch.from_numpy(y)

@@ -1,0 +1,82 @@
+{
+  "name": "04 \u00b7 LSTM",
+  "area": "lab",
+  "task": "sequence_classification",
+  "framework": "PyTorch",
+  "architecture": "lab:4",
+  "dataset": "UCI Smartphone HAR",
+  "dataset_key": "har",
+  "classes": [
+    "walking",
+    "upstairs",
+    "downstairs",
+    "sitting",
+    "standing",
+    "laying"
+  ],
+  "n_classes": 6,
+  "input": {
+    "size": 0,
+    "channels": 0,
+    "mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "desc": "128x9 inertial sensor window"
+  },
+  "outputs": "6 class probabilities",
+  "metric_names": [
+    "accuracy"
+  ],
+  "metrics": {
+    "accuracy": 0.8775
+  },
+  "training": {
+    "epochs": 12,
+    "batch_size": 128,
+    "train_n": 7352,
+    "test_n": 2947,
+    "split": "official UCI train/test"
+  },
+  "notes": "",
+  "trained": true,
+  "scaler": {
+    "mean": [
+      -0.0006363163120113313,
+      -0.0002922959974966943,
+      -0.0002753041626419872,
+      0.0005063982680439949,
+      -0.0008237347356043756,
+      0.00011293507122900337,
+      0.8039517998695374,
+      0.028755413368344307,
+      0.08649728447198868
+    ],
+    "std": [
+      0.19478464126586914,
+      0.1223599836230278,
+      0.10680276900529861,
+      0.4066542983055115,
+      0.38166531920433044,
+      0.25563353300094604,
+      0.4140908122062683,
+      0.39084291458129883,
+      0.35768383741378784
+    ]
+  },
+  "artifact_version": "2.0.0",
+  "model_id": "lab04",
+  "weights_file": "artifacts/lab/lab04.pt",
+  "weights_bytes": 80957,
+  "saved_at": "2026-10-12T19:18:22Z",
+  "python": "3.13.14",
+  "torch": "2.14.1+cpu",
+  "platform": "Linux-6.1.155-x86_64-with-glibc2.41",
+  "git_commit": "e3130084b771c143dcbebebb604c4ecb6d5265a7"
+}

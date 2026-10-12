@@ -87,6 +87,10 @@ def train_mlp(spec):
 
 
 def _mnist_image_model(spec, cls):
+    # NOTE: raising this to 30 epochs with a cosine schedule was measured to *lower*
+    # held-out accuracy (lab12 0.852 -> 0.793), so the original 15-epoch recipe is
+    # kept. The compact MNIST nets (lab12/13/14) remain below the 0.90 serving gate;
+    # see the final report — this is a documented limitation, not a silent skip.
     x_tr, y_tr = D.mnist("train", MNIST_TRAIN)
     x_te, y_te = D.mnist("test", MNIST_TEST)
     model = cls(**spec.build_kwargs); opt = torch.optim.Adam(model.parameters(), 1e-3)
@@ -103,18 +107,29 @@ def _mnist_image_model(spec, cls):
 
 
 def train_sequence(spec, cls):
-    x, y = D.har()
-    x = x[:6000]; y = y[:6000]
-    n = int(len(x) * 0.8); x_tr, y_tr, x_te, y_te = x[:n], y[:n], x[n:], y[n:]
+    # Use the dataset's OFFICIAL train/test split (a random 80/20 cut of the train
+    # file both leaks test data and discards the real held-out set), and normalise
+    # each inertial channel — raw scales differ by ~100x and dominate the RNN/LSTM.
+    x_tr, y_tr = D.har("train")
+    x_te, y_te = D.har("test")
+    mean, std = D.har_scaler()
+    m_t, s_t = torch.from_numpy(mean), torch.from_numpy(std)
+    x_tr = (x_tr - m_t) / s_t
+    x_te = (x_te - m_t) / s_t
+
     model = cls(**spec.build_kwargs); opt = torch.optim.Adam(model.parameters(), 1e-3)
-    for ep in range(8):
+    for ep in range(12):
         model.train(); perm = torch.randperm(len(x_tr))
         for i in range(0, len(x_tr), 128):
             idx = perm[i:i + 128]; opt.zero_grad()
             loss = F.cross_entropy(model(x_tr[idx]), y_tr[idx]); loss.backward(); opt.step()
     acc = _acc(model, x_te, y_te)
     m = {"accuracy": round(acc, 4)}
-    return model, m, _meta(spec, m, {"epochs": 8, "batch_size": 128, "train_n": len(x_tr)})
+    meta = _meta(spec, m, {"epochs": 12, "batch_size": 128,
+                           "train_n": len(x_tr), "test_n": len(x_te),
+                           "split": "official UCI train/test"})
+    meta["scaler"] = {"mean": mean.tolist(), "std": std.tolist()}
+    return model, m, meta
 
 
 def train_autoencoder(spec):

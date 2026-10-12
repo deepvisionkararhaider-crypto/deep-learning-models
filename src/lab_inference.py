@@ -84,6 +84,13 @@ def predict_image_class(spec: ModelSpec, image) -> dict:
 def predict_sequence(spec: ModelSpec, values: list[float]) -> dict:
     model, meta = load(spec)
     x = _seq_tensor(values)
+    # Apply the SAME per-channel normalisation the trainer used (constants live in
+    # the artifact metadata). Without this, raw signals would be out of distribution.
+    scaler = meta.get("scaler")
+    if scaler and "mean" in scaler and "std" in scaler:
+        mean = torch.tensor(scaler["mean"], dtype=torch.float32).reshape(1, 1, -1)
+        std = torch.tensor(scaler["std"], dtype=torch.float32).reshape(1, 1, -1)
+        x = (x - mean) / std
     probs = _softmax(model(x))
     classes = meta.get("classes") or spec.classes
     return {"kind": "classification", "predicted": classes[int(probs.argmax())],
