@@ -1,0 +1,310 @@
+name: Train models and publish artifacts
+
+# Manual, resumable training. Each CV model trains in its OWN matrix job so a
+# single failing model can no longer throw away every other model's work (the
+# previous single-job design ran verify_models.py *before* the commit step, so a
+# nonzero exit discarded all freshly trained checkpoints).
+on:
+  workflow_dispatch:
+    inputs:
+      train_lab:
+        description: "Train the 20-model laboratory"
+        required: true
+        type: boolean
+        default: true
+      train_cv:
+        description: "Train medical + agriculture CV models"
+        required: true
+        type: boolean
+        default: true
+      cv_epochs:
+        description: "Epochs per CV model"
+        required: true
+        type: choice
+        options: ["2", "3", "4"]
+        default: "3"
+      include_heavy:
+        description: "Also attempt Mask R-CNN (slow, needs several GB RAM)"
+        required: true
+        type: boolean
+        default: false
+      defer:
+        description: "Comma-separated model ids to skip on purpose"
+        required: false
+        type: string
+        default: "brain_maskrcnn,plant_maskrcnn"
+      publish:
+        description: "Commit + push verified artifacts back to main"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: model-training-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  # -------------------------------------------------------------------------
+  # 1. Fast gate: compile everything and run the unit tests before spending
+  #    any training minutes.
+  # -------------------------------------------------------------------------
+  validate:
+    name: Validate code and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-train.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-train.txt
+          pip install pytest
+
+      - name: Compile all sources
+        run: python -m compileall -q src scripts app.py tests
+
+      - name: Run the unit test suite (no network, synthetic fixtures only)
+        run: pytest -q tests/
+
+      - name: Verify the committed artifacts (report only, never fails on missing)
+        run: python scripts/verify_models.py --require none
+
+  # -------------------------------------------------------------------------
+  # 2. The 20-model laboratory (single job; the datasets are small).
+  # -------------------------------------------------------------------------
+  train-lab:
+    name: Train laboratory models
+    needs: validate
+    if: ${{ inputs.train_lab }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-train.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-train.txt
+      - name: Record runner capacity
+        run: |
+          python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
+          free -h; df -h .
+      - name: Train lab models (reuses valid artifacts, resumes safely)
+        run: python scripts/train_lab.py --model all
+      - name: Upload lab artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-lab
+          path: |
+            artifacts/lab/
+            artifacts/metadata/
+            artifacts/status/
+          if-no-files-found: warn
+          retention-days: 7
+
+  # -------------------------------------------------------------------------
+  # 3. Each CV model in its own matrix job: isolated failures, resumable,
+  #    no cross-model memory pressure, no unsafe concurrent writes.
+  # -------------------------------------------------------------------------
+  train-cv:
+    name: Train ${{ matrix.model }}
+    needs: validate
+    if: ${{ inputs.train_cv }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        model:
+          - brain_cnn
+          - brain_densenet
+          - brain_vit
+          - brain_unet
+          - brain_yolo
+          - plant_cnn
+          - plant_densenet
+          - plant_vit
+          - plant_unet
+          - plant_yolo
+          - brain_maskrcnn
+          - plant_maskrcnn
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-train.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-train.txt
+      - name: Record runner capacity
+        run: |
+          python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
+          free -h; df -h .
+      - name: Fetch only this model's dataset
+        run: |
+          python - <<'PY'
+          import json, subprocess, sys
+          from pathlib import Path
+          sys.path.insert(0, ".")
+          from src.registry import BY_ID
+          key = BY_ID["${{ matrix.model }}"].dataset_key
+          print(f"dataset_key for ${{ matrix.model }}: {key}", flush=True)
+          r = subprocess.run([sys.executable, "scripts/_fetch_data.py", key])
+          raise SystemExit(r.returncode)
+          PY
+      - name: Train this model
+        run: |
+          EXTRA=""
+          if [ "${{ inputs.include_heavy }}" = "true" ]; then EXTRA="--allow-heavy"; fi
+          python scripts/train_models.py \
+            --model ${{ matrix.model }} \
+            --epochs ${{ inputs.cv_epochs }} \
+            --batch-size 8 \
+            --defer "${{ inputs.defer }}" \
+            $EXTRA
+      - name: Show this model's status record
+        if: always()
+        run: cat "artifacts/status/${{ matrix.model }}.json" || echo "no status record written"
+      - name: Upload this model's artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ matrix.model }}
+          path: |
+            artifacts/medical/
+            artifacts/agriculture/
+            artifacts/metadata/
+            artifacts/status/
+          if-no-files-found: warn
+          retention-days: 7
+
+  # -------------------------------------------------------------------------
+  # 4. Aggregate every model's output, verify, and only then publish.
+  # -------------------------------------------------------------------------
+  publish:
+    name: Verify and publish
+    needs: [validate, train-cv]
+    if: ${{ always() && inputs.train_cv }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-train.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-train.txt
+
+      - name: Download all trained artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: artifacts-*
+          path: _incoming
+          merge-multiple: true
+
+      - name: Merge incoming artifacts into artifacts/
+        run: |
+          python - <<'PY'
+          import shutil
+          from pathlib import Path
+          src = Path("_incoming")
+          if not src.exists():
+              print("no incoming artifacts"); raise SystemExit(0)
+          for area in ("medical", "agriculture", "lab", "metadata", "status"):
+              d = src / area
+              if not d.exists():
+                  continue
+              dst = Path("artifacts") / area
+              dst.mkdir(parents=True, exist_ok=True)
+              for f in d.rglob("*"):
+                  if f.is_file():
+                      shutil.copy2(f, dst / f.name)
+          print("merged artifact files:", sum(1 for _ in Path("artifacts").rglob("*") if _.is_file()))
+          PY
+
+      - name: Verify every saved checkpoint (fresh load + inference)
+        id: verify
+        continue-on-error: true
+        run: python scripts/verify_models.py --require cv
+
+      - name: Check artifact sizes against the GitHub per-file limit
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files = [p for p in Path("artifacts").rglob("*") if p.is_file()]
+          total = sum(p.stat().st_size for p in files)
+          print(f"{len(files)} artifact files, {total/1024/1024:.1f} MiB total")
+          big = [(str(p), p.stat().st_size) for p in files if p.stat().st_size >= 100*1024*1024]
+          if big:
+              for n, s in big:
+                  print(f"OVER GitHub 100MiB limit: {n} ({s/1024/1024:.1f} MiB)")
+              raise SystemExit("Oversized artifact: use Git LFS or external storage, then re-run.")
+          PY
+
+      - name: Show the training status summary
+        if: always()
+        run: cat artifacts/status/summary.json 2>/dev/null || echo "no summary.json"
+
+      - name: Commit and push verified artifacts
+        if: ${{ inputs.publish && steps.verify.outcome == 'success' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f artifacts/
+          if git diff --cached --quiet; then
+            echo "No artifact changes to publish."
+            exit 0
+          fi
+          git commit -m "Train and publish verified model artifacts [skip ci]"
+          git push origin HEAD:main
+
+      - name: Upload logs + metadata (always, even on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: training-logs
+          path: |
+            artifacts/status/
+            artifacts/metadata/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Fail the job if verification failed
+        if: ${{ steps.verify.outcome != 'success' }}
+        run: |
+          echo "::error::Required-model verification failed; artifacts were NOT published."
+          exit 1

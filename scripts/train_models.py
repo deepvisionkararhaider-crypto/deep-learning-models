@@ -553,6 +553,8 @@ def main() -> int:
     ap.add_argument("--batch-size", type=int, default=16)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--allow-heavy", action="store_true", help="attempt Mask R-CNN (very slow on CPU)")
+    ap.add_argument("--require-heavy", action="store_true",
+                    help="treat Mask R-CNN as a required model (fails the run if not trained)")
     ap.add_argument("--defer", default="", help="comma-separated model ids to skip on purpose")
     ap.add_argument("--force", action="store_true", help="retrain even if valid weights already exist")
     ap.add_argument("--list", action="store_true")
@@ -606,7 +608,10 @@ def main() -> int:
                              "rerun with --allow-heavy (needs several GB RAM)")
             print("  DEFERRED: heavy detector — use --allow-heavy to attempt.", flush=True)
             records.append(rec); write_record(rec)
-            required_missing.append(spec.id)
+            # An impractical-on-CPU model is DEFERRED by default and reported
+            # prominently; --require-heavy promotes it back to a hard requirement.
+            if args.require_heavy:
+                required_missing.append(spec.id)
             continue
 
         if not args.force and A.has_weights(spec.id, spec.area):

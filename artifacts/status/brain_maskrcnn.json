@@ -1,0 +1,22 @@
+{
+  "model_id": "brain_maskrcnn",
+  "area": "medical",
+  "task": "instance_segmentation",
+  "architecture": "maskrcnn",
+  "dataset": "Brain tumor instance segmentation (COCO polygons)",
+  "dataset_key": "brain_instseg",
+  "classes": [
+    "Tumor",
+    "0"
+  ],
+  "seed": 42,
+  "epochs": 3,
+  "batch_size": 16,
+  "checkpoint": null,
+  "checkpoint_bytes": null,
+  "metrics": {},
+  "duration_s": null,
+  "verification": null,
+  "reason": "heavy detector (Mask R-CNN) not attempted; rerun with --allow-heavy (needs several GB RAM)",
+  "status": "DEFERRED"
+}
