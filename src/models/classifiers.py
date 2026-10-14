@@ -45,12 +45,13 @@ def build_densenet(n_classes: int, in_ch: int = 3, pretrained: bool = False) -> 
 
 
 class CompactViT(nn.Module):
-    """A small from-scratch Vision Transformer.
+    """A small from-scratch Vision Transformer (offline fallback only).
 
-    ``torchvision``'s ViT-B/16 is 86M params (a 344 MB artifact — over GitHub's
-    100 MB file limit and unsafe in this project's ~1 GB CI/runtime RAM budget),
-    so the shipped ViT is a compact 16x16-patch transformer trained from scratch.
-    Its exact geometry is recorded in the artifact metadata.
+    This is the transformer that previously produced **chance-level accuracy**
+    (plant_vit 0.0410): it was randomly initialised and trained for only a couple
+    of epochs on CPU, which is not enough for a data-hungry ViT. It is kept only
+    as a dependency-free fallback; the registry now ships a genuinely
+    ImageNet-pretrained timm ViT — see :func:`build_vit`.
     """
 
     def __init__(self, n_classes: int, in_ch: int = 3, image_size: int = 224,
@@ -76,22 +77,50 @@ class CompactViT(nn.Module):
 
 
 def build_vit(n_classes: int, in_ch: int = 3, pretrained: bool = False, image_size: int = 224,
-              variant: str = "compact") -> nn.Module:
-    """Vision Transformer. ``variant='compact'`` (shipped) or ``'torchvision'`` (large)."""
-    if variant == "torchvision" and not pretrained:
+              variant: str = "timm") -> nn.Module:
+    """Vision Transformer.
+
+    ``variant='timm'`` (default, shipped) — a genuinely **ImageNet-pretrained**
+    ``vit_tiny_patch16_224`` from ``timm`` (5.5 M params, ~22 MB artifact). This
+    replaces the previous randomly-initialised ``CompactViT``, which is the exact
+    reason ``plant_vit`` scored chance-level (0.0410) accuracy: a from-scratch ViT
+    cannot converge in 2-4 CPU epochs. The pretrained backbone fixes the root
+    cause while staying well under GitHub's 100 MB file limit.
+
+    ``variant='torchvision'`` — torchvision ``vit_b_16`` (86 M params, 344 MB
+    artifact; over the GitHub limit) kept for completeness.
+
+    ``pretrained`` is **only** True during offline training. At inference the
+    runtime builds the same architecture with ``pretrained=False`` and loads the
+    saved ``state_dict`` — so no weights are ever downloaded at serve time.
+    """
+    if variant == "torchvision":
         from torchvision.models import vit_b_16
-        m = vit_b_16(weights=None)
+        if pretrained:
+            from torchvision.models import ViT_B_16_Weights
+            m = vit_b_16(weights=ViT_B_16_Weights.DEFAULT)
+        else:
+            m = vit_b_16(weights=None)
         if in_ch != 3:
             m.conv_proj = nn.Conv2d(in_ch, m.conv_proj.out_channels,
                                     kernel_size=m.conv_proj.kernel_size, stride=m.conv_proj.stride)
         m.heads.head = nn.Linear(m.heads.head.in_features, n_classes)
         return m
-    if variant == "torchvision":
-        from torchvision.models import vit_b_16, ViT_B_16_Weights
-        m = vit_b_16(weights=ViT_B_16_Weights.DEFAULT)
-        m.heads.head = nn.Linear(m.heads.head.in_features, n_classes)
-        return m
-    return CompactViT(n_classes, in_ch=in_ch, image_size=image_size)
+
+    try:
+        import timm
+    except ImportError as exc:            # pragma: no cover - dependency is in requirements
+        raise ImportError(
+            "The ViT now uses the pretrained 'timm' backbone. Install it with "
+            "`pip install timm>=1.0,<2` (it is listed in requirements.txt / "
+            "requirements-train.txt)."
+        ) from exc
+
+    # dynamic_img_size lets the same checkpoint accept a different input size at
+    # inference without breaking the stored positional embeddings.
+    m = timm.create_model("vit_tiny_patch16_224", pretrained=pretrained,
+                          num_classes=n_classes, in_chans=in_ch, dynamic_img_size=True)
+    return m
 
 
 CLASSIFIER_BUILDERS = {

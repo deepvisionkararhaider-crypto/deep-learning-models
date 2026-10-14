@@ -115,8 +115,10 @@ MEDICAL: list[ModelSpec] = [
         classes=L.BRAIN_MRI_CLASSES, input_desc="224x224 RGB MRI slice",
         input_size=224, in_ch=3, outputs="4 class probabilities",
         metric_names=["accuracy", "precision_macro", "recall_macro", "f1_macro"],
-        builder="vit", notes="CompactViT trained from scratch (16x16 patches, dim 192). "
-                             "torchvision ViT-B/16 (344 MB) exceeds the GitHub 100 MB file limit."),
+        builder="vit", notes="Genuinely ImageNet-pretrained timm 'vit_tiny_patch16_224' "
+                             "(5.5M params, ~22MB artifact) fine-tuned end-to-end. Replaces the "
+                             "previous randomly-initialised CompactViT, which scored chance-level "
+                             "(0.0410) accuracy on 25-class plant disease."),
     ModelSpec(
         id="brain_unet", name="U-Net (brain tumor segmentation)", area="medical",
         task="segmentation", framework="PyTorch (from scratch)", dataset_key="brain_seg",

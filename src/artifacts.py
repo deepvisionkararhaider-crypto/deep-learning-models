@@ -29,6 +29,46 @@ META_DIR = ARTIFACTS / "metadata"
 
 ARTIFACT_VERSION = "2.0.0"
 
+# Machine-readable per-model status values written by scripts/train_models.py and
+# read by scripts/verify_models.py + the Streamlit UI.
+STATUS_VALUES = ("TRAINED_VERIFIED", "TRAINED_UNVERIFIED", "ARCH_ONLY",
+                 "BLOCKED", "DEFERRED", "FAILED")
+STATUS_DIR = ARTIFACTS / "status"
+
+
+def _rel(p: Path) -> str:
+    """Repo-relative path when possible, else the absolute path.
+
+    ``Path.relative_to`` raises when the artifacts directory lives outside the
+    repo (e.g. an alternate cache/volume), so callers must not assume it succeeds.
+    """
+    try:
+        return str(p.relative_to(REPO))
+    except ValueError:
+        return str(p)
+
+
+def read_status(model_id: str) -> dict[str, Any] | None:
+    """The structured training record for one model, if it was written."""
+    p = STATUS_DIR / f"{model_id}.json"
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:                                  # noqa: BLE001
+        return None
+
+
+def read_run_summary() -> dict[str, Any] | None:
+    """The summary.json of the most recent training run (or None)."""
+    p = STATUS_DIR / "summary.json"
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:                                  # noqa: BLE001
+        return None
+
 
 class ArtifactMissing(FileNotFoundError):
     """Raised when a model has no trained weights on disk."""
@@ -63,7 +103,7 @@ def save_model(model: torch.nn.Module, model_id: str, area: str, metadata: dict[
     meta.setdefault("artifact_version", ARTIFACT_VERSION)
     meta["model_id"] = model_id
     meta["area"] = area
-    meta["weights_file"] = str(wpath.relative_to(REPO))
+    meta["weights_file"] = _rel(wpath)
     meta["weights_bytes"] = wpath.stat().st_size
     meta["saved_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     meta["python"] = sys.version.split()[0]
@@ -123,7 +163,7 @@ def load_model(model_id: str, area: str, build_fn) -> torch.nn.Module:
     wpath = weights_path(model_id, area)
     if not wpath.exists():
         raise ArtifactMissing(
-            f"No trained weights for '{model_id}' (expected {wpath.relative_to(REPO)}). "
+            f"No trained weights for '{model_id}' (expected {_rel(wpath)}). "
             f"Train it with: python scripts/train_models.py --model {model_id}"
         )
     model = build_fn()

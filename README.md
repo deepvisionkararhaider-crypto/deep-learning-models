@@ -1,6 +1,6 @@
 # Deep Learning · Medical AI · Smart Agriculture — Streamlit Platform
 
-A single **Streamlit** application that combines three things:
+A single **Streamlit** application combining three things:
 
 1. **A 20-architecture deep-learning laboratory** (MLP, CNN, RNN/LSTM/GRU, Autoencoder, VAE, GAN,
    Transformer, BERT-style, GPT-style, ResNet, DenseNet, ViT, U-Net, YOLO-style, Siamese, Seq2Seq,
@@ -10,68 +10,137 @@ A single **Streamlit** application that combines three things:
 3. **Smart Agriculture AI** — plant-leaf **disease classification** (25 classes), leaf-disease
    **segmentation**, and cotton disease **detection**.
 
-The six required computer-vision model types — **CNN, DenseNet121, YOLO-style, Mask R-CNN, U-Net,
-Vision Transformer** — are instantiated for both the medical and agricultural domains.
+The six required computer-vision model types — **CNN, DenseNet121, Vision Transformer, U-Net,
+YOLO-style, Mask R-CNN** — are instantiated for both the medical and agricultural domains.
 
 > **Inference only.** The public app never trains and never downloads datasets. Models are trained
-> **offline** by scripts in `scripts/`, evaluated, and shipped as committed artifacts under
-> `artifacts/`. When weights are missing, the UI says **"training required"** instead of faking a
-> result.
+> **offline** (locally or in GitHub Actions) and shipped as committed artifacts under `artifacts/`.
+> When weights are missing the UI says **"training required"** — it never presents random weights as
+> a trained model.
 
 ---
 
-## Quick start (local)
+## Project status (read this first)
+
+| | |
+|---|---|
+| Registered models | 32 (12 CV + 20 lab) |
+| Lab models with committed weights | 16 READY, 3 BELOW-GATE (lab12/13/14), 1 MISSING (lab16) |
+| CV models with committed weights | **0** — `artifacts/medical/` and `artifacts/agriculture/` are not in the repo yet |
+| How the CV models get trained | `workflow_dispatch` on **Train models and publish artifacts** (see below) |
+
+**Why there were previously no CV checkpoints.** The old workflow ran `scripts/verify_models.py`
+*before* its commit step, and that script returned a nonzero exit code whenever any model was merely
+*untrained* (not broken). The nonzero exit aborted the job, so **every trained checkpoint was
+discarded before it could be committed.** This has been fixed in three ways:
+
+* `verify_models.py` now separates **MISSING / DEFERRED / BLOCKED** (not a defect) from
+  **INFER-FAILED** (a real defect), and `--require` controls what is actually mandatory.
+* Training is now **one matrix job per model**, so a single failing model cannot throw away the
+  others' work.
+* Artifacts are uploaded from every job and merged in a final `publish` job that commits **only
+  after** verification passes.
+
+Run the workflow once and the CV table below fills in with real, measured numbers.
+
+---
+
+## Quick start (local, inference only)
 
 ```bash
-pip install -r requirements.txt          # runtime (inference only, CPU torch)
+pip install -r requirements.txt          # runtime (inference only, CPU torch + timm)
 streamlit run app.py                     # http://localhost:8501
 ```
 
-## Deploy to Streamlit Community Cloud (free) — do this yourself
+## Train the models (offline)
 
-1. Push this repository to GitHub (branch `main`).
-2. Go to <https://share.streamlit.io> → **New app** → **Deploy a public app from GitHub**.
-3. Choose this repository, branch **main**, and set **Main file path** to `app.py`.
-4. **Deploy.** Streamlit installs `requirements.txt` (CPU-only PyTorch) and starts the app.
-5. No secrets, no database, no Docker, no Render required.
+```bash
+pip install -r requirements-train.txt
 
-> Models whose weights are not committed will display **"training required"** — that is expected and
-> honest. See *Training* below to produce them.
+# --- computer-vision models (medical + agriculture) ---
+python scripts/_fetch_data.py                    # cache the CV datasets
+python scripts/train_models.py --list
+python scripts/train_models.py --model brain_densenet --epochs 4
+python scripts/train_models.py --model all --epochs 4 --batch-size 8 \
+       --defer brain_maskrcnn,plant_maskrcnn     # heavy detectors deferred on purpose
+python scripts/train_models.py --model brain_maskrcnn --allow-heavy   # only if you have RAM
+
+# --- the 20-model laboratory ---
+python scripts/train_lab.py --model all
+
+# --- verify (fresh-process reload + inference for every model) ---
+python scripts/verify_models.py --require cv
+pytest -q tests/
+```
+
+Each run writes `artifacts/<area>/<id>.pt`, `artifacts/metadata/<id>.json`, a per-model
+`artifacts/status/<id>.json` record and a machine-readable `artifacts/status/summary.json`.
+
+### Honest model states
+
+| State | Meaning |
+|---|---|
+| `TRAINED_VERIFIED` | weights saved **and** reloaded from disk in a fresh process with inference OK |
+| `TRAINED_UNVERIFIED` | weights saved but the fresh-load check failed |
+| `ARCH_ONLY` | architecture builds, no weights produced |
+| `BLOCKED` | no usable dataset exists — cannot be trained at all |
+| `DEFERRED` | skipped on purpose via `--defer` (recorded, never silently dropped) |
+| `FAILED` | training or evaluation raised |
+
+`scripts/train_models.py` returns exit code **0 only when every required model is
+`TRAINED_VERIFIED`**. `scripts/verify_models.py` returns **0 only when every required model is
+`READY` and no model is `INFER-FAILED`**.
+
+---
+
+## GitHub Actions: train and publish
+
+Workflow: **`.github/workflows/train-models.yml`** (`workflow_dispatch`).
+
+Inputs: `train_lab`, `train_cv`, `cv_epochs` (2/3/4), `include_heavy`, `defer`, `publish`.
+
+Pipeline:
+
+```
+validate  (compile + unit tests + report-only verify)      ~5 min
+   ├── train-lab        (20 lab models, one job)           ~10 min
+   └── train-cv         (matrix: one job per CV model)     ~30-90 min
+publish  (download all artifacts → merge → verify --require cv → size check → commit+push)
+```
+
+To trigger it: **Actions → Train models and publish artifacts → Run workflow** (leave
+`defer=brain_maskrcnn,plant_maskrcnn` unless you have ≥8 GB RAM and want the heavy detectors).
 
 ---
 
 ## Architecture
 
-```
-real public dataset
-      │  (scripts/_fetch_data.py  →  .cache/parquet)
-      ▼
-OFFLINE TRAINING            scripts/train_models.py   (medical + agriculture CV)
-      │                     scripts/train_lab.py      (the 20 lab models)
-      ▼
-EVALUATION  →  SAVE WEIGHTS  →  SAVE METADATA
-      │            artifacts/<area>/<id>.pt
-      │            artifacts/metadata/<id>.json     (classes, size, mean/std, metrics, provenance)
-      ▼
-COMMITTED ARTIFACTS
-      ▼
-STREAMLIT  app.py  →  src.inference / src.lab_inference   (loads weights, eval(), no_grad)
-      ▼
-VISITOR UPLOADS IMAGE  →  INFERENCE  →  PREDICTION + VISUALISATION
+```mermaid
+flowchart TD
+    A["Real public dataset<br/>(HuggingFace parquet mirror)"] --> B["scripts/_fetch_data.py<br/>.cache/parquet"]
+    B --> C1["scripts/train_models.py<br/>medical + agriculture CV"]
+    B --> C2["scripts/train_lab.py<br/>20 laboratory models"]
+    C1 --> D["Evaluate on held-out split<br/>accuracy/F1 · Dice/IoU · mAP@50"]
+    C2 --> D
+    D --> E["Save weights + metadata + status<br/>artifacts/&lt;area&gt;/&lt;id&gt;.pt<br/>artifacts/metadata/&lt;id&gt;.json"]
+    E --> F["scripts/verify_models.py<br/>fresh-process reload + inference"]
+    F --> G["Committed artifacts"]
+    G --> H["Streamlit app.py<br/>src.inference / src.lab_inference"]
+    H --> I["Visitor uploads image → prediction + visualisation"]
 ```
 
-Key guarantees enforced in code:
+Guarantees enforced in code:
 
-* **Preprocessing parity** — `src/imaging.to_tensor()` is the *only* image→tensor path, and the
-  normalisation constants are read back from each artifact's metadata. Training and inference cannot
-  drift.
+* **Preprocessing parity** — `src/imaging.to_tensor()` is the *only* image→tensor path and the
+  normalisation constants are read back from each artifact's metadata, so training and inference
+  cannot drift (`test_to_tensor_matches_make_transform`).
 * **No training at inference** — `src/inference.py` and `src/lab_inference.py` contain no
-  `torch.optim`, no `.backward()` (asserted by a CI test).
-* **Explicit IO contracts** — every architecture documents and validates its tensor shapes. The old
-  `mat1 and mat2 shapes cannot be multiplied (256x20 and 30x64)` bug is covered by
-  `test_ann_input_contract_is_30`.
-* **Honest status** — a model is "trained" only when its weights load and an inference smoke test
-  passes (`scripts/verify_models.py`).
+  `torch.optim` and no `.backward()` (asserted by a CI test).
+* **Leakage-free splits** — `files_for(key, split)` never returns another split's rows, and cached
+  parquet is named `<split>-<index>.parquet` with `validation`/`valid`/`val` canonicalised
+  (`test_files_for_never_returns_other_splits`).
+* **Honest status** — a model is only shown as trained when its weights load *and* an inference
+  smoke test passes.
 
 ---
 
@@ -79,11 +148,11 @@ Key guarantees enforced in code:
 
 ```
 app.py                     Streamlit entry point (main file path)
-requirements.txt           runtime deps (CPU torch, streamlit, …)
-requirements-train.txt     extra deps for offline training (pyarrow, …)
+requirements.txt           runtime deps (CPU torch, timm, streamlit, …)
+requirements-train.txt     extra deps for offline training (pyarrow, matplotlib)
 src/
   registry.py              single source of truth: 32 models, tasks, datasets, IO contracts
-  artifacts.py             save/load weights + metadata; graceful missing handling
+  artifacts.py             save/load weights + metadata + status; graceful missing handling
   imaging.py               shared preprocessing (train == inference)
   inference.py             CV predictors (classification / segmentation / detection / instances)
   lab_inference.py         the 20 lab predictors, each with its own input contract
@@ -92,96 +161,83 @@ src/
   ui/                      home · medical · agriculture · lab · info pages
 scripts/
   _fetch_data.py           resumable dataset downloader
-  train_models.py          train medical/agriculture CV models
+  train_models.py          train medical/agriculture CV models (structured status records)
   train_lab.py             train the 20 lab models
-  verify_models.py         report REAL status of every model
-tests/test_platform.py     registry, shapes, IO contracts, no-training-at-inference
-artifacts/                 medical/ · agriculture/ · lab/ · metadata/
-DATASETS.md                dataset sources, licences, annotation formats
+  verify_models.py         report REAL status; --require cv|all|none
+tests/
+  test_platform.py         registry, shapes, IO contracts, no-training-at-inference
+  test_pipeline.py         leakage, detection/segmentation math, artifacts, status contract
+artifacts/                 medical/ · agriculture/ · lab/ · metadata/ · status/
+DATASETS.md                dataset sources, licences, annotation formats, sample counts
 ```
 
 ---
 
-## Train once, serve predictions to every visitor
+## Model catalogue
 
-**Visitors never train models.** The Streamlit app is inference-only: opening the site, uploading an image, or clicking Predict does not start training. The app loads saved weights and metadata from `artifacts/`. Every visitor can use the same committed artifacts.
+### Computer-vision models (medical)
 
-Training is an owner/maintainer task, performed once on a machine with enough RAM/CPU (or an appropriate training runner). After validating the results, commit the weights and metadata to GitHub; Streamlit Community Cloud then loads those files on deployment/restart.
-
-The training scripts now **skip models that already have valid artifacts** by default. Use `--force` only when you intentionally want to retrain.
-
-```bash
-# 1. Install training-only dependencies on your own computer
-pip install -r requirements-train.txt
-
-# 2. Train only the MNIST CNN (if it is missing or fails the quality gate)
-python scripts/train_lab.py --model 2
-
-# 3. Train a specific medical/agriculture model (example)
-python scripts/train_models.py --model brain_densenet --epochs 4
-
-# 4. Verify saved artifacts and smoke-test inference
-python scripts/verify_models.py
-
-# 5. Run the prediction app locally
-streamlit run app.py
-```
-
-After verifying a model, commit both its `artifacts/<area>/<model_id>.pt` weights and matching `artifacts/metadata/<model_id>.json` metadata. Do not claim a model is ready unless its weights load and its held-out metrics are acceptable. Large models may exceed GitHub's normal file-size limit; use Git LFS or external artifact storage if needed, while ensuring the deployed app can actually retrieve the artifacts.
-
-To deliberately retrain an existing model, add `--force`, for example `python scripts/train_lab.py --model 2 --force`.
-
-## Training (offline, your machine or CI)
-
-```bash
-pip install -r requirements-train.txt
-
-python scripts/_fetch_data.py                 # cache the CV datasets
-python scripts/train_models.py --list
-python scripts/train_models.py --model brain_densenet --epochs 4
-python scripts/train_models.py --model all --epochs 4
-python scripts/train_lab.py --model all        # the 20 lab models
-
-python scripts/verify_models.py                # verify load + inference for every model
-pytest -q tests/test_platform.py
-```
-
-Every run writes `artifacts/<area>/<id>.pt` and `artifacts/metadata/<id>.json` containing the model
-config, class labels, input size, mean/std, dataset id, training config, measured metrics, artifact
-version and git commit.
-
-### Heavy models
-Mask R-CNN (and ViT-B/16) are large. They are marked **training required** unless trained with
-`--allow-heavy`; the platform documents their cost instead of pretending they are ready.
-
----
-
-## Model → dataset → task (computer-vision models)
-
-| Model | Domain | Task | Dataset | Metric |
+| Model | Task | Dataset | Metric | Architecture |
 |---|---|---|---|---|
-| CNN | medical | 4-class MRI classification | Brain MRI (PranomVignesh) | accuracy, F1 |
-| DenseNet121 | medical | 4-class MRI classification | Brain MRI | accuracy, F1 |
-| ViT (compact) | medical | 4-class MRI classification | Brain MRI | accuracy, F1 |
-| U-Net | medical | tumour segmentation | BraTS-derived masks | Dice, IoU |
-| YOLO-style | medical | tumour detection | Brain tumour boxes (COCO) | mAP@50 |
-| Mask R-CNN | medical | tumour instances | Brain tumour polygons (COCO) | mask AP@50 |
-| CNN | agriculture | 25-class leaf classification | Plant leaf disease (Jharkhand) | accuracy, F1 |
-| DenseNet121 | agriculture | 25-class leaf classification | Plant leaf disease | accuracy, F1 |
-| ViT (compact) | agriculture | 25-class leaf classification | Plant leaf disease | accuracy, F1 |
-| U-Net | agriculture | leaf-disease segmentation | Leaf disease segmentation | Dice, IoU |
-| YOLO-style | agriculture | cotton disease detection | Cotton plant disease (COCO) | mAP@50 |
-| Mask R-CNN | agriculture | cotton disease instances | cotton instances | mask AP@50 |
+| `brain_cnn` | 4-class MRI classification | Brain MRI (PranomVignesh) | accuracy, macro-F1 | small CNN, from scratch |
+| `brain_densenet` | 4-class MRI classification | Brain MRI | accuracy, macro-F1 | DenseNet121, ImageNet-pretrained |
+| `brain_vit` | 4-class MRI classification | Brain MRI | accuracy, macro-F1 | **timm `vit_tiny_patch16_224`, ImageNet-pretrained** |
+| `brain_unet` | tumour segmentation | Brain tumour COCO polygons → binary mask | Dice, IoU | U-Net, from scratch |
+| `brain_yolo` | tumour detection | Brain tumour detection (COCO boxes) | mAP@50 | YOLO-style anchor-free, from scratch |
+| `brain_maskrcnn` | tumour instances | Brain tumour COCO polygons | mean instances / confidence | Mask R-CNN ResNet-50-FPN |
 
-Full sources, licences and annotation formats: **[DATASETS.md](DATASETS.md)**.
+### Computer-vision models (agriculture)
+
+| Model | Task | Dataset | Metric | Architecture |
+|---|---|---|---|---|
+| `plant_cnn` | 25-class leaf classification | Plant leaf disease (Jharkhand) | accuracy, macro-F1 | small CNN, from scratch |
+| `plant_densenet` | 25-class leaf classification | Plant leaf disease | accuracy, macro-F1 | DenseNet121, ImageNet-pretrained |
+| `plant_vit` | 25-class leaf classification | Plant leaf disease | accuracy, macro-F1 | **timm `vit_tiny_patch16_224`, ImageNet-pretrained** |
+| `plant_unet` | leaf-disease segmentation | Leaf disease segmentation | Dice, IoU | U-Net, from scratch |
+| `plant_yolo` | cotton disease detection | Cotton plant disease (COCO boxes) | mAP@50 | YOLO-style anchor-free, from scratch |
+| `plant_maskrcnn` | leaf instances | — | — | **BLOCKED** (no accessible instance-seg dataset) |
+
+### Laboratory models (20)
+
+| # | Model | Task | Dataset |
+|---|---|---|---|
+| 1 | ANN / MLP | tabular classification | Breast Cancer Wisconsin |
+| 2 | CNN | 10-class digit classification | MNIST |
+| 3–5 | RNN / LSTM / GRU | sequence classification | UCI Smartphone HAR |
+| 6 | Autoencoder | reconstruction | MNIST |
+| 7 | VAE | reconstruction + latent | MNIST |
+| 8 | GAN (discriminator) | real/fake classification | MNIST |
+| 9–10 | Transformer / BERT-style | 4-class text classification | 20 Newsgroups |
+| 11 | GPT-style | char language modelling | 20 Newsgroups |
+| 12–14 | ResNet / DenseNet / ViT | 10-class digit classification | MNIST |
+| 15 | U-Net | foreground segmentation | MNIST (derived) |
+| 16 | YOLO-style | digit localisation | MNIST (derived) |
+| 17 | Siamese | metric learning | MNIST |
+| 18 | Seq2Seq | char reconstruction | 20 Newsgroups |
+| 19 | Diffusion MLP | tabular denoising | Breast Cancer Wisconsin |
+| 20 | GNN | 7-class node classification | Cora |
+
+Full dataset sources, licences, annotation formats and sample counts: **[DATASETS.md](DATASETS.md)**.
 
 ---
 
-## Evaluation
+## Known limitations (honest)
 
-`📊 Model Evaluation` shows **only measured** metrics from each artifact's held-out test set.
-`scripts/verify_models.py` prints `READY / ARCH-ONLY / INFER-FAILED` for all 32 models. Run it any
-time — it is the source of truth for "how many models actually work".
+* **`plant_yolo` is expected to score near zero mAP@50.** Its source dataset annotates each diseased
+  region as a **~2.5 × 2.5-pixel spot** inside a 640 × 640 image. A single-scale 14 × 14-grid detector
+  cannot represent an object smaller than one cell (≈46 px), so the metric is a **data-scale
+  limitation**, not a training bug. It is reported honestly rather than hidden. A proper fix needs a
+  higher-resolution / multi-scale head or a different dataset — documented, not faked.
+* **`brain_maskrcnn` / `plant_maskrcnn`** are heavy detectors (ResNet-50-FPN). They are `DEFERRED`
+  unless `--allow-heavy` is passed and the runner has several GB of RAM.
+* **`plant_maskrcnn` is `BLOCKED`**: the only candidate agriculture instance-segmentation dataset
+  (`daiv05/corn-leaf-instance-segmentation`) has no parquet conversion, so it cannot be fetched.
+  No agriculture instance masks are fabricated from semantic masks.
+* **lab12/13/14 (MNIST ResNet/DenseNet/ViT) are `BELOW-GATE`** — their compact from-scratch MNIST
+  nets sit below the 0.90 serving gate. They are hidden from the prediction selector rather than
+  presented as reliable.
+* **Not clinically or agronomically validated.** No external cohort, no prospective testing, no
+  regulatory review.
 
 ---
 
@@ -190,13 +246,7 @@ time — it is the source of truth for "how many models actually work".
 **Medical:** research/educational prototype, **not a medical device**. Outputs are not diagnoses and
 must not drive treatment. Consult a clinician.
 **Agriculture:** decision-support only; predictions can be wrong. Verify important findings with an
-agronomist. No personal or medical data is collected or stored.
-
-## Limitations
-
-* CPU-only free tier: some large detectors are marked *training required*.
-* Metrics reflect source-dataset splits and biases; no external-cohort validation.
-* PlantVillage-style lab images are easier than real field photos.
+agronomist. No personal or medical data is collected or stored — uploads are processed in-session.
 
 ## Troubleshooting
 
@@ -206,6 +256,7 @@ agronomist. No personal or medical data is collected or stored.
 | `ArtifactIncompatible` | Architecture changed — retrain that model |
 | Slow first load | Weights load once per session (`st.cache_resource`) |
 | Streamlit Cloud build fails | Ensure `requirements.txt` is at the repo root and uses CPU torch |
+| Workflow can't push artifacts | Repo → Settings → Actions → Workflow permissions → *Read and write* |
 
 ## Licence
 

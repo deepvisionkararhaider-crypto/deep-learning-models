@@ -34,6 +34,10 @@ from ..imaging import decode_image
 ROOT = Path(__file__).resolve().parents[2]
 CACHE = ROOT / ".cache" / "parquet"
 MANIFEST = ROOT / ".cache" / "parquet_manifest.json"
+# Path-only image columns (e.g. plant_cls) are fetched from the HF resolve
+# endpoint on demand. Cache them on disk so a multi-epoch training run does not
+# re-download the same JPEG hundreds of times (and so a resumed run is cheap).
+IMG_CACHE = ROOT / ".cache" / "images"
 
 
 # --------------------------------------------------------------------------- #
@@ -75,8 +79,16 @@ def available(key: str) -> bool:
 def _rows(key: str, columns: list[str] | None = None, split: str | None = None) -> Iterator[dict]:
     import pyarrow.parquet as pq
 
-    for fp in files_for(key, split):
-        pf = pq.ParquetFile(fp)
+    files = files_for(key, split)
+    if not files:
+        raise FileNotFoundError(
+            f"no cached parquet for {key!r} split={split!r}; run scripts/_fetch_data.py {key}"
+        )
+    for fp in files:
+        try:
+            pf = pq.ParquetFile(fp)
+        except Exception as exc:                       # noqa: BLE001
+            raise RuntimeError(f"corrupt or incomplete parquet file {fp.name}: {exc}") from exc
         for batch in pf.iter_batches(batch_size=64, columns=columns):
             d = batch.to_pydict()
             n = len(next(iter(d.values())))
@@ -85,6 +97,41 @@ def _rows(key: str, columns: list[str] | None = None, split: str | None = None) 
 
 
 _IMG_FETCH_CACHE: dict[str, bytes] = {}
+
+
+def _fetch_image(url: str, attempts: int = 4) -> bytes:
+    """Download one image with a disk cache + retries.
+
+    The HF resolve endpoint occasionally returns 5xx/timeouts under load; without
+    retries a single flaky request would abort an entire training epoch. Cached
+    bytes are written atomically so an interrupted run cannot leave a truncated
+    file that later reads as a corrupt image.
+    """
+    import hashlib
+    import time
+    import urllib.request
+
+    IMG_CACHE.mkdir(parents=True, exist_ok=True)
+    fp = IMG_CACHE / hashlib.sha1(url.encode("utf-8")).hexdigest()
+    if fp.is_file() and fp.stat().st_size > 0:
+        return fp.read_bytes()
+    last: Exception | None = None
+    for a in range(attempts):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                data = r.read()
+            if not data:
+                raise RuntimeError("empty image response")
+            tmp = fp.with_suffix(".part")
+            tmp.write_bytes(data)
+            tmp.replace(fp)
+            return data
+        except Exception as exc:                       # noqa: BLE001
+            last = exc
+            time.sleep(1.5 * (a + 1))
+    raise RuntimeError(f"failed to fetch image after {attempts} attempts: "
+                       f"{type(last).__name__}: {last}")
 
 
 def _resolve_hf_path(path: str) -> str | None:
@@ -131,10 +178,7 @@ def _img_bytes(cell: Any) -> bytes:
                 raise ValueError(f"cannot resolve image path {path!r}")
             if url in _IMG_FETCH_CACHE:
                 return _IMG_FETCH_CACHE[url]
-            import urllib.request
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=60) as r:
-                data = r.read()
+            data = _fetch_image(url)
             _IMG_FETCH_CACHE[url] = data
             return data
         raise ValueError("image cell has neither bytes nor a usable path")
@@ -247,23 +291,33 @@ def _objects_to_boxes(obj: Any, width: int, height: int) -> tuple[np.ndarray, np
     return xyxy, labels
 
 
-def load_detection(key: str, limit: int | None = None) -> dict[str, list[dict]]:
-    """Return {split: [ {image, boxes(N,4 px), labels(N,), width, height} ]}."""
+def load_detection(key: str, limit: int | None = None,
+                   train_limit: int | None = None) -> dict[str, list[dict]]:
+    """Return {split: [ {image, boxes(N,4 px xyxy), labels(N,), width, height} ]}.
+
+    Split assignment is derived from the cached file name via the canonical
+    :func:`split_of` (``validation``/``valid``/``val`` all map to ``val``). The
+    previous implementation guessed the split with ad-hoc substring checks, which
+    could route a validation shard into training and contaminate every metric.
+    """
     if not available(key):
         raise FileNotFoundError(f"{key} not cached; run scripts/_fetch_data.py {key}")
     out: dict[str, list[dict]] = {"train": [], "val": [], "test": []}
-    files = files_for(key)
-    for i, fp in enumerate(files):
-        split = "train" if i == len(files) - 1 or "train" in fp.name else ("test" if "test" in fp.name else "val")
-        if "test" in fp.name:
-            split = "test"
-        elif "validation" in fp.name or "val" in fp.name:
-            split = "val"
-        else:
+    import pyarrow.parquet as pq
+    for fp in files_for(key):
+        canon = split_of(fp)                       # train | validation | test
+        split = "val" if canon == "validation" else canon
+        if split not in out:
             split = "train"
-        import pyarrow.parquet as pq
-        pf = pq.ParquetFile(fp)
-        cols = ["image", "objects"] + (["width", "height"] if "width" in pf.schema_arrow.names else [])
+        cap = train_limit if (split == "train" and train_limit) else limit
+        try:
+            pf = pq.ParquetFile(fp)
+        except Exception as exc:                   # noqa: BLE001
+            raise RuntimeError(f"corrupt or incomplete parquet file {fp.name}: {exc}") from exc
+        names = pf.schema_arrow.names
+        if "image" not in names or "objects" not in names:
+            raise RuntimeError(f"{fp.name} lacks required columns (image, objects); got {names}")
+        cols = ["image", "objects"] + (["width", "height"] if "width" in names else [])
         for batch in pf.iter_batches(batch_size=32, columns=cols):
             d = batch.to_pydict()
             for j in range(len(d["image"])):
@@ -273,8 +327,10 @@ def load_detection(key: str, limit: int | None = None) -> dict[str, list[dict]]:
                 xyxy, labels = _objects_to_boxes(d["objects"][j], w, h)
                 out[split].append({"image": b, "boxes": xyxy, "labels": labels,
                                    "width": int(w), "height": int(h)})
-                if limit and len(out[split]) >= limit:
+                if cap and len(out[split]) >= cap:
                     break
+            if cap and len(out[split]) >= cap:
+                break
     return out
 
 
@@ -371,11 +427,17 @@ def load_instance_segmentation(key: str = "brain_instseg", limit: int | None = N
                 order.append(fn)
             g = grouped[fn]
             bb = r["bbox"]
-            if bb is not None and len(bb) == 4:
-                x, y, bw, bh = [float(v) for v in bb]
-                g["boxes"].append([x, y, x + bw, y + bh])
+            if bb is None or len(bb) != 4:
+                continue                                   # annotation without a box -> skip
+            x, y, bw, bh = [float(v) for v in bb]
+            if bw <= 0 or bh <= 0:
+                continue                                   # degenerate box -> skip
+            mask = _polygons_to_mask(r["segmentation"], g["width"], g["height"])
+            if mask.max() == 0:
+                continue                                   # polygon failed to rasterise -> skip
+            g["boxes"].append([x, y, x + bw, y + bh])
             g["labels"].append(int(r["category_id"]) - 1)     # 1-based -> 0-based
-            g["masks"].append(_polygons_to_mask(r["segmentation"], g["width"], g["height"]))
+            g["masks"].append(mask)
             if limit and len(order) >= limit:
                 break
         for fn in order:
@@ -407,6 +469,25 @@ def load_brain_seg(limit: int | None = None) -> dict[str, list[tuple[bytes, byte
             mask_img.save(buf, format="PNG")
             out[split].append((g["image"], buf.getvalue()))
     return out
+
+
+def split_counts(key: str) -> dict[str, int]:
+    """Row counts per canonical split from parquet metadata (no image decode).
+
+    Used to write an auditable split manifest into every artifact so a reviewer
+    can confirm the train/val/test sizes without re-running the pipeline.
+    """
+    import pyarrow.parquet as pq
+
+    counts: dict[str, int] = {}
+    for fp in files_for(key):
+        canon = split_of(fp)
+        try:
+            n = pq.ParquetFile(fp).metadata.num_rows
+        except Exception:                              # noqa: BLE001
+            n = 0
+        counts[canon] = counts.get(canon, 0) + int(n)
+    return counts
 
 
 # --------------------------------------------------------------------------- #

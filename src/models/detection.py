@@ -129,19 +129,44 @@ def encode_targets(boxes_xyxy: Sequence[torch.Tensor], labels: Sequence[torch.Te
     return tgt
 
 
-def yolo_loss(pred: torch.Tensor, target: torch.Tensor, pos_weight: float = 20.0) -> torch.Tensor:
-    """BCE objectness + L1 box + (1-IoU) + CE class on positive cells."""
+def yolo_loss(pred: torch.Tensor, target: torch.Tensor, pos_weight: float = 20.0,
+              box_gain: float = 5.0) -> torch.Tensor:
+    """BCE objectness + L1 box + (1-IoU) + CE class on positive cells.
+
+    Box regression and the IoU term are evaluated in **global normalised xyxy**
+    coordinates. The previous implementation ran ``box_iou`` on raw cell-relative
+    offsets, so the overlap term was geometrically meaningless; this reconstructs
+    the true centre ``(gx + sigmoid(tx)) / G`` for predictions and
+    ``(gx + tx_cell) / G`` for the stored cell-relative targets.
+    """
     obj_p = pred[..., 0]
     obj_t = target[..., 0]
     loss_obj = F.binary_cross_entropy_with_logits(
-        obj_p, obj_t, pos_weight=torch.tensor(pos_weight))
+        obj_p, obj_t, pos_weight=torch.tensor(pos_weight, device=pred.device))
 
     mask = obj_t > 0.5
     if mask.any():
-        bp = torch.sigmoid(pred[..., 1:5])[mask]
-        bt = target[..., 1:5][mask]
+        g = pred.shape[1]
+        dev = pred.device
+        ys, xs = torch.meshgrid(torch.arange(g, device=dev), torch.arange(g, device=dev),
+                                indexing="ij")
+        gx = xs[None].expand_as(obj_p)[mask].float()
+        gy = ys[None].expand_as(obj_p)[mask].float()
+
+        p = pred[..., 1:5][mask]
+        pcx = (gx + p[:, 0].sigmoid()) / g
+        pcy = (gy + p[:, 1].sigmoid()) / g
+        pw, ph = p[:, 2].sigmoid(), p[:, 3].sigmoid()
+        bp = torch.stack([pcx - pw / 2, pcy - ph / 2, pcx + pw / 2, pcy + ph / 2], -1)
+
+        t = target[..., 1:5][mask]
+        tcx = (gx + t[:, 0]) / g
+        tcy = (gy + t[:, 1]) / g
+        tw, th = t[:, 2], t[:, 3]
+        bt = torch.stack([tcx - tw / 2, tcy - th / 2, tcx + tw / 2, tcy + th / 2], -1)
+
         loss_box = F.l1_loss(bp, bt)
-        iou = box_iou(xywh_to_xyxy(bp), xywh_to_xyxy(bt)).diag()
+        iou = box_iou(bp, bt).diag()
         loss_box = loss_box + (1 - iou).mean()
         cp = pred[..., 5:][mask]
         ct = target[..., 5:][mask].argmax(-1)
@@ -149,7 +174,7 @@ def yolo_loss(pred: torch.Tensor, target: torch.Tensor, pos_weight: float = 20.0
     else:
         loss_box = pred.sum() * 0.0
         loss_cls = pred.sum() * 0.0
-    return loss_obj + 5.0 * loss_box + loss_cls
+    return loss_obj + box_gain * loss_box + loss_cls
 
 
 @torch.no_grad()
@@ -186,6 +211,71 @@ def decode_predictions(pred: torch.Tensor, conf_thr: float = 0.30, iou_thr: floa
                         "score": float(flat_score[j]), "class": int(flat_cls[j])})
     out.sort(key=lambda d: -d["score"])
     return out[:max_det]
+
+
+@torch.no_grad()
+def average_precision(pred_boxes: torch.Tensor, pred_scores: torch.Tensor, pred_labels: torch.Tensor,
+                      gt_boxes: torch.Tensor, gt_labels: torch.Tensor,
+                      iou_thr: float = 0.5, n_classes: int = 1) -> dict:
+    """Class-averaged AP@``iou_thr`` over a *dataset* of images (VOC-style).
+
+    Each image contributes its own precision/recall curve (all detections pooled
+    across images and sorted by score), so this is a real mAP@50 rather than the
+    per-image "fraction of predictions above IoU" that the old evaluator reported.
+    An empty ground truth with no predictions counts as a correct (empty) image;
+    an empty ground truth with predictions counts them as false positives.
+    """
+    tp = np.zeros((0,)); fp = np.zeros((0,)); scores = np.zeros((0,)); gts_per_class = np.zeros(n_classes)
+    aps = []
+    for c in range(n_classes):
+        all_tp, all_fp, all_scores, n_gt = [], [], [], 0
+        for i in range(len(pred_boxes)):
+            pb, ps, pl = pred_boxes[i], pred_scores[i], pred_labels[i]
+            gb, gl = gt_boxes[i], gt_labels[i]
+            keep_c = pl == c
+            pb_c, ps_c = pb[keep_c], ps[keep_c]
+            gb_c = gb[gl == c]
+            n_gt += int(gb_c.shape[0])
+            matched = np.zeros(gb_c.shape[0], dtype=bool)
+            if pb_c.numel() == 0:
+                continue
+            order = torch.argsort(ps_c, descending=True)
+            pb_c, ps_c = pb_c[order], ps_c[order]
+            ious = box_iou(pb_c, gb_c) if gb_c.numel() else torch.zeros((pb_c.shape[0], 0))
+            for j in range(pb_c.shape[0]):
+                if ious.numel() == 0:
+                    all_tp.append(0.0); all_fp.append(1.0); all_scores.append(float(ps_c[j])); continue
+                row = ious[j].clone()
+                row[torch.from_numpy(matched)] = -1.0
+                best = int(row.argmax())
+                if float(row[best]) >= iou_thr:
+                    matched[best] = True
+                    all_tp.append(1.0); all_fp.append(0.0)
+                else:
+                    all_tp.append(0.0); all_fp.append(1.0)
+                all_scores.append(float(ps_c[j]))
+        if n_gt == 0:
+            aps.append(float("nan"))
+            continue
+        if not all_scores:
+            aps.append(0.0)
+            continue
+        order = np.argsort(-np.asarray(all_scores))
+        tp_c = np.asarray(all_tp)[order]
+        fp_c = np.asarray(all_fp)[order]
+        ctp = np.cumsum(tp_c); cfp = np.cumsum(fp_c)
+        rec = ctp / max(n_gt, 1)
+        prec = ctp / np.maximum(ctp + cfp, 1e-9)
+        # monotonic precision envelope (VOC 2010+)
+        for k in range(len(prec) - 1, 0, -1):
+            prec[k - 1] = max(prec[k - 1], prec[k])
+        ap = float(np.sum(np.diff(np.concatenate([[0.0], rec])) * prec)) if len(rec) else 0.0
+        aps.append(ap)
+    valid = [a for a in aps if not (isinstance(a, float) and np.isnan(a))]
+    return {"mAP@50": float(np.mean(valid)) if valid else 0.0,
+            "per_class_ap": {str(c): (None if np.isnan(aps[c]) else round(float(aps[c]), 4))
+                             for c in range(n_classes)},
+            "n_classes_scored": len(valid)}
 
 
 # --------------------------------------------------------------------------- #

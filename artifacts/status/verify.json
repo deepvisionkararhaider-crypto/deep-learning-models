@@ -1,0 +1,271 @@
+{
+  "generated_at": "2026-10-14T19:17:41Z",
+  "require": "none",
+  "counts": {
+    "MISSING": 12,
+    "BLOCKED": 1,
+    "READY": 16,
+    "BELOW-GATE": 3
+  },
+  "required": [],
+  "not_ready": [],
+  "infer_failed": [],
+  "models": [
+    {
+      "model_id": "brain_cnn",
+      "name": "CNN (brain MRI)",
+      "area": "medical",
+      "task": "classification",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "brain_densenet",
+      "name": "DenseNet121 (brain MRI)",
+      "area": "medical",
+      "task": "classification",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "brain_vit",
+      "name": "Vision Transformer (brain MRI)",
+      "area": "medical",
+      "task": "classification",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "brain_unet",
+      "name": "U-Net (brain tumor segmentation)",
+      "area": "medical",
+      "task": "segmentation",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "brain_yolo",
+      "name": "YOLO-style (brain tumor detection)",
+      "area": "medical",
+      "task": "detection",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "brain_maskrcnn",
+      "name": "Mask R-CNN (brain tumor instances)",
+      "area": "medical",
+      "task": "instance_segmentation",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "plant_cnn",
+      "name": "CNN (plant leaf)",
+      "area": "agriculture",
+      "task": "classification",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "plant_densenet",
+      "name": "DenseNet121 (plant leaf)",
+      "area": "agriculture",
+      "task": "classification",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "plant_vit",
+      "name": "Vision Transformer (plant leaf)",
+      "area": "agriculture",
+      "task": "classification",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "plant_unet",
+      "name": "U-Net (leaf disease segmentation)",
+      "area": "agriculture",
+      "task": "segmentation",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "plant_yolo",
+      "name": "YOLO-style (cotton leaf detection)",
+      "area": "agriculture",
+      "task": "detection",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "plant_maskrcnn",
+      "name": "Mask R-CNN (leaf instances)",
+      "area": "agriculture",
+      "task": "instance_segmentation",
+      "state": "BLOCKED",
+      "note": "No agriculture instance-segmentation dataset is available on the HuggingFace datasets-server parquet mirror. daiv05/corn-leaf-instance-segmentation exists but has no parquet conversion (0 rows, config"
+    },
+    {
+      "model_id": "lab01",
+      "name": "01 \u00b7 ANN / MLP",
+      "area": "lab",
+      "task": "tabular_classification",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab02",
+      "name": "02 \u00b7 CNN",
+      "area": "lab",
+      "task": "classification",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab03",
+      "name": "03 \u00b7 RNN",
+      "area": "lab",
+      "task": "sequence_classification",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab04",
+      "name": "04 \u00b7 LSTM",
+      "area": "lab",
+      "task": "sequence_classification",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab05",
+      "name": "05 \u00b7 GRU",
+      "area": "lab",
+      "task": "sequence_classification",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab06",
+      "name": "06 \u00b7 Autoencoder",
+      "area": "lab",
+      "task": "reconstruction",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab07",
+      "name": "07 \u00b7 VAE",
+      "area": "lab",
+      "task": "reconstruction",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab08",
+      "name": "08 \u00b7 GAN (discriminator)",
+      "area": "lab",
+      "task": "binary_classification",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab09",
+      "name": "09 \u00b7 Transformer",
+      "area": "lab",
+      "task": "text_classification",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab10",
+      "name": "10 \u00b7 BERT-style",
+      "area": "lab",
+      "task": "text_classification",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab11",
+      "name": "11 \u00b7 GPT-style",
+      "area": "lab",
+      "task": "language_modeling",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab12",
+      "name": "12 \u00b7 ResNet",
+      "area": "lab",
+      "task": "classification",
+      "state": "BELOW-GATE",
+      "note": "weights present but accuracy=0.852 < serving gate 0.90"
+    },
+    {
+      "model_id": "lab13",
+      "name": "13 \u00b7 DenseNet",
+      "area": "lab",
+      "task": "classification",
+      "state": "BELOW-GATE",
+      "note": "weights present but accuracy=0.7975 < serving gate 0.90"
+    },
+    {
+      "model_id": "lab14",
+      "name": "14 \u00b7 ViT",
+      "area": "lab",
+      "task": "classification",
+      "state": "BELOW-GATE",
+      "note": "weights present but accuracy=0.5877 < serving gate 0.90"
+    },
+    {
+      "model_id": "lab15",
+      "name": "15 \u00b7 U-Net",
+      "area": "lab",
+      "task": "segmentation",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab16",
+      "name": "16 \u00b7 YOLO-style",
+      "area": "lab",
+      "task": "detection",
+      "state": "MISSING",
+      "note": "no trained weights on disk"
+    },
+    {
+      "model_id": "lab17",
+      "name": "17 \u00b7 Siamese",
+      "area": "lab",
+      "task": "metric_learning",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab18",
+      "name": "18 \u00b7 Seq2Seq",
+      "area": "lab",
+      "task": "sequence_to_sequence",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab19",
+      "name": "19 \u00b7 Diffusion MLP",
+      "area": "lab",
+      "task": "tabular_denoising",
+      "state": "READY",
+      "note": ""
+    },
+    {
+      "model_id": "lab20",
+      "name": "20 \u00b7 GNN",
+      "area": "lab",
+      "task": "graph_classification",
+      "state": "READY",
+      "note": ""
+    }
+  ]
+}
