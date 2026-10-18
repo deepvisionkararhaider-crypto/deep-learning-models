@@ -59,6 +59,7 @@ from src.models.detection import (encode_targets, yolo_loss, decode_predictions,
                                   build_maskrcnn, make_maskrcnn_target, instances_to_predictions)
 from src.models.segmentation import bce_dice_loss, dice_coef, iou_score  # noqa: E402
 from src.registry import BY_ID, CV_MODELS, ModelSpec, build_model  # noqa: E402
+from src import training_state as TS  # noqa: E402
 
 SEED = 42
 
@@ -133,7 +134,24 @@ def _check_labels(items, n_classes, tag):
                          f"class mapping is wrong for this dataset.")
 
 
-def train_classifier(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -> dict:
+def _restore(spec: ModelSpec, model, opt, sched, epochs: int, resume: bool):
+    """Load resume state when asked, else start clean. Never trusts bad state."""
+    if not resume or not TS.has_state(spec.id):
+        return None
+    try:
+        st = TS.load_state(spec.id, model=model, optimizer=opt, scheduler=sched,
+                           total_epochs=epochs)
+        print(f"    resumed from epoch {st.start_epoch}/{epochs} "
+              f"(global_step={st.global_step})", flush=True)
+        return st
+    except TS.InvalidCheckpoint as exc:
+        print(f"    resume state unusable ({exc}) — starting a fresh run", flush=True)
+        TS.clear(spec.id)
+        return None
+
+
+def train_classifier(spec: ModelSpec, epochs: int, batch_size: int, lr: float,
+                     resume: bool = False) -> dict:
     n = len(spec.classes)
     if spec.dataset_key == "brain_mri_cls":
         data = L.load_brain_mri(limit=None)
@@ -173,8 +191,10 @@ def train_classifier(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -
 
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, epochs))
-    hist = []
-    for ep in range(epochs):
+    st = _restore(spec, model, opt, sched, epochs, resume)
+    start, step = (st.start_epoch, st.global_step) if st else (0, 0)
+    hist = list(st.history) if st else []
+    for ep in range(start, epochs):
         model.train()
         tot, seen = 0.0, 0
         for x, y in train_ld:
@@ -186,9 +206,14 @@ def train_classifier(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -
             loss.backward()
             opt.step()
             tot += float(loss.detach()) * x.size(0); seen += x.size(0)   # detach: no grad tracking
+            step += 1
         sched.step()
         hist.append(round(tot / max(seen, 1), 4))
         print(f"    epoch {ep+1}/{epochs} loss={hist[-1]:.4f}", flush=True)
+        # atomic resume state after every completed epoch
+        TS.save_state(spec.id, model=model, optimizer=opt, scheduler=sched, epoch=ep + 1,
+                      global_step=step, history=hist,
+                      extra={"dataset_key": spec.dataset_key, "epochs": epochs})
 
     metrics = evaluate_classifier(model, test_ld, n)
     metrics["val"] = evaluate_classifier(model, val_ld, n)
@@ -198,14 +223,15 @@ def train_classifier(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -
     meta = _base_meta(spec, size, IMAGENET_MEAN, IMAGENET_STD, metrics,
                       extra={"epochs": epochs, "lr": lr, "batch_size": batch_size,
                              "split_seed": SEED, "backbone": backbone,
-                             "train_cap": cap})
+                             "train_cap": cap, "resumed_from": start})
     return {"model": model, "metrics": metrics, "meta": meta}
 
 
 # --------------------------------------------------------------------------- #
 # segmentation (U-Net)
 # --------------------------------------------------------------------------- #
-def train_unet(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -> dict:
+def train_unet(spec: ModelSpec, epochs: int, batch_size: int, lr: float,
+               resume: bool = False) -> dict:
     size = spec.input_size
     if spec.dataset_key == "brain_seg":
         data = L.load_brain_seg()
@@ -232,8 +258,11 @@ def train_unet(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -> dict
 
     model = build_model(spec)()
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
-    hist = []
-    for ep in range(epochs):
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, epochs))
+    st = _restore(spec, model, opt, sched, epochs, resume)
+    start, step = (st.start_epoch, st.global_step) if st else (0, 0)
+    hist = list(st.history) if st else []
+    for ep in range(start, epochs):
         model.train(); tot, seen = 0.0, 0
         for x, m in tl:
             opt.zero_grad()
@@ -243,8 +272,13 @@ def train_unet(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -> dict
             loss = bce_dice_loss(logits, m)
             loss.backward(); opt.step()
             tot += float(loss.detach()) * x.size(0); seen += x.size(0)   # detach
+            step += 1
+        sched.step()
         hist.append(round(tot / max(seen, 1), 4))
         print(f"    epoch {ep+1}/{epochs} loss={hist[-1]:.4f}", flush=True)
+        TS.save_state(spec.id, model=model, optimizer=opt, scheduler=sched, epoch=ep + 1,
+                      global_step=step, history=hist,
+                      extra={"dataset_key": spec.dataset_key, "epochs": epochs})
 
     metrics = _eval_unet(model, el)
     metrics["val"] = _eval_unet(model, vl)
@@ -253,7 +287,7 @@ def train_unet(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -> dict
     meta = _base_meta(spec, size, IMAGENET_MEAN, IMAGENET_STD, metrics,
                       extra={"epochs": epochs, "lr": lr, "loss": "bce_dice",
                              "mask_threshold": 0.5, "train_cap": cap,
-                             "foreground_in_sample": fg})
+                             "foreground_in_sample": fg, "resumed_from": start})
     return {"model": model, "metrics": metrics, "meta": meta}
 
 
@@ -292,7 +326,8 @@ def _detection_targets(rows, tf, grid, n_classes):
     return xs, tgts, gts
 
 
-def train_yolo(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -> dict:
+def train_yolo(spec: ModelSpec, epochs: int, batch_size: int, lr: float,
+               resume: bool = False) -> dict:
     size = spec.input_size
     grid = spec.build_kwargs.get("grid", 14)
     data = L.load_detection(spec.dataset_key)
@@ -308,8 +343,11 @@ def train_yolo(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -> dict
 
     model = build_model(spec)()
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
-    hist = []
-    for ep in range(epochs):
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, epochs))
+    st = _restore(spec, model, opt, sched, epochs, resume)
+    start, step = (st.start_epoch, st.global_step) if st else (0, 0)
+    hist = list(st.history) if st else []
+    for ep in range(start, epochs):
         model.train(); random.shuffle(train_rows); tot, seen = 0.0, 0
         for i in range(0, len(train_rows), batch_size):
             chunk = train_rows[i:i + batch_size]
@@ -319,8 +357,13 @@ def train_yolo(spec: ModelSpec, epochs: int, batch_size: int, lr: float) -> dict
             loss = yolo_loss(model(xb), tb)
             loss.backward(); opt.step()
             tot += float(loss.detach()) * xb.size(0); seen += xb.size(0)   # detach
+            step += 1
+        sched.step()
         hist.append(round(tot / max(seen, 1), 4))
         print(f"    epoch {ep+1}/{epochs} loss={hist[-1]:.4f}", flush=True)
+        TS.save_state(spec.id, model=model, optimizer=opt, scheduler=sched, epoch=ep + 1,
+                      global_step=step, history=hist,
+                      extra={"dataset_key": spec.dataset_key, "epochs": epochs})
 
     metrics = _eval_detection(model, data["test"], tf, spec, grid)
     metrics["val"] = _eval_detection(model, data["val"], tf, spec, grid)
@@ -523,6 +566,9 @@ def save(spec: ModelSpec, result: dict) -> dict:
     meta = A.save_model(result["model"], spec.id, spec.area, result["meta"])
     scal = {k: v for k, v in result["metrics"].items() if isinstance(v, (int, float))}
     print(f"  saved {spec.id}: {meta['weights_bytes']/1e6:.2f}MB | metrics={scal}", flush=True)
+    # The published artifact is now the source of truth; drop the scratch resume state
+    # so a later run does not resume a model that has already been saved.
+    TS.clear(spec.id)
     return meta
 
 
@@ -557,6 +603,8 @@ def main() -> int:
                     help="treat Mask R-CNN as a required model (fails the run if not trained)")
     ap.add_argument("--defer", default="", help="comma-separated model ids to skip on purpose")
     ap.add_argument("--force", action="store_true", help="retrain even if valid weights already exist")
+    ap.add_argument("--resume", action="store_true",
+                    help="continue an interrupted run from artifacts/checkpoints/<id>/state.pt")
     ap.add_argument("--list", action="store_true")
     args = ap.parse_args()
 
@@ -631,11 +679,11 @@ def main() -> int:
 
         try:
             if spec.task == "classification":
-                res = train_classifier(spec, args.epochs, args.batch_size, args.lr)
+                res = train_classifier(spec, args.epochs, args.batch_size, args.lr, resume=args.resume)
             elif spec.task == "segmentation":
-                res = train_unet(spec, args.epochs, args.batch_size, args.lr)
+                res = train_unet(spec, args.epochs, args.batch_size, args.lr, resume=args.resume)
             elif spec.task == "detection":
-                res = train_yolo(spec, args.epochs, args.batch_size, args.lr)
+                res = train_yolo(spec, args.epochs, args.batch_size, args.lr, resume=args.resume)
             elif spec.task == "instance_segmentation":
                 res = train_maskrcnn(spec, args.epochs, args.batch_size, args.lr)
             else:
