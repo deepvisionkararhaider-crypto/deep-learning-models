@@ -1,13 +1,21 @@
-# Streamlit Community Cloud runtime dependencies (inference only).
-# CPU-only PyTorch keeps the image small and avoids CUDA downloads.
+# Streamlit Community Cloud runtime dependencies (INFERENCE ONLY).
+#
+# Deliberately smaller than requirements-train.txt: no dataset library, no
+# matplotlib, no test tooling. CPU-only PyTorch keeps the image small and avoids
+# pulling CUDA wheels.
+#
+# Verified on Python 3.11 / 3.13 with the versions pinned below.
 --extra-index-url https://download.pytorch.org/whl/cpu
 streamlit==1.50.0
 numpy>=1.26,<3
 pillow>=10,<12
 torch>=2.2,<3
 torchvision>=0.17,<1
-# Pretrained ViT backbone (vit_tiny_patch16_224); architecture only at inference.
+# Architecture definitions for the ViT models (no pretrained weights at inference).
 timm>=1.0,<2
+# Downloading published checkpoints from the Hugging Face Hub (read-only, anonymous).
+huggingface_hub>=0.23,<3
+safetensors>=0.4,<1
 scikit-learn>=1.4,<2
 scipy>=1.11,<2
 pandas>=2.0,<3

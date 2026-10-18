@@ -1,0 +1,2304 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-10-18T19:48:09Z",
+  "hf_repo": "KararDeepVision/deep-learning-models",
+  "hf_revision": null,
+  "hub_manifest_present": false,
+  "totals": {
+    "models": 32,
+    "laboratory": 20,
+    "medical": 6,
+    "agriculture": 6
+  },
+  "status_counts": {
+    "TRAINED_UNVERIFIED": 17,
+    "ARCH_ONLY": 13,
+    "DEFERRED": 1,
+    "BLOCKED": 1
+  },
+  "ready_models": [],
+  "models": [
+    {
+      "model_id": "brain_cnn",
+      "display_name": "CNN (brain MRI)",
+      "area": "medical",
+      "domain": "medical",
+      "task": "classification",
+      "modality": "image",
+      "framework": "PyTorch (from scratch)",
+      "architecture": "cnn",
+      "builder": "cnn",
+      "build_kwargs": {},
+      "input": {
+        "modality": "image",
+        "size": 224,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "224x224 RGB MRI slice"
+      },
+      "outputs": "4 class probabilities",
+      "classes": [
+        "glioma",
+        "meningioma",
+        "no-tumor",
+        "pituitary"
+      ],
+      "n_classes": 4,
+      "dataset": "Brain MRI tumor classification (4-class)",
+      "dataset_key": "brain_mri_cls",
+      "metrics": {
+        "accuracy": 0.8585,
+        "precision_macro": 0.858,
+        "recall_macro": 0.8557,
+        "f1_macro": 0.8555,
+        "confusion_matrix": [
+          [
+            145,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            80,
+            7,
+            36
+          ],
+          [
+            0,
+            2,
+            109,
+            4
+          ],
+          [
+            1,
+            24,
+            2,
+            127
+          ]
+        ],
+        "n_test": 537,
+        "val": {
+          "accuracy": 0.8835,
+          "precision_macro": 0.8854,
+          "recall_macro": 0.8799,
+          "f1_macro": 0.8806,
+          "confusion_matrix": [
+            [
+              255,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              169,
+              18,
+              58
+            ],
+            [
+              0,
+              5,
+              267,
+              10
+            ],
+            [
+              0,
+              32,
+              2,
+              257
+            ]
+          ],
+          "n_test": 1073
+        },
+        "train_loss_curve": [
+          0.7273,
+          0.5926,
+          0.4973
+        ],
+        "split_sizes": {
+          "train": 2000,
+          "val": 1073,
+          "test": 537
+        }
+      },
+      "metric_names": [
+        "accuracy",
+        "precision_macro",
+        "recall_macro",
+        "f1_macro"
+      ],
+      "test_set_size": null,
+      "split_manifest": {
+        "test": 537,
+        "train": 3759,
+        "validation": 1073
+      },
+      "training": {
+        "epochs": 3,
+        "lr": 0.001,
+        "batch_size": 8,
+        "split_seed": 42,
+        "backbone": "from scratch",
+        "train_cap": 2000
+      },
+      "weights_bytes": 980608,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/medical/brain_cnn.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "medical/brain_cnn/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "Trained from scratch; MRI is grayscale replicated to 3 channels.",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "brain_densenet",
+      "display_name": "DenseNet121 (brain MRI)",
+      "area": "medical",
+      "domain": "medical",
+      "task": "classification",
+      "modality": "image",
+      "framework": "PyTorch (transfer learning)",
+      "architecture": "densenet",
+      "builder": "densenet",
+      "build_kwargs": {},
+      "input": {
+        "modality": "image",
+        "size": 224,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "224x224 RGB MRI slice"
+      },
+      "outputs": "4 class probabilities",
+      "classes": [
+        "glioma",
+        "meningioma",
+        "no-tumor",
+        "pituitary"
+      ],
+      "n_classes": 4,
+      "dataset": "Brain MRI tumor classification (4-class)",
+      "dataset_key": "brain_mri_cls",
+      "metrics": {},
+      "metric_names": [
+        "accuracy",
+        "precision_macro",
+        "recall_macro",
+        "f1_macro"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "medical/brain_densenet/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "ImageNet-pretrained backbone, fine-tuned classifier head.",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "brain_vit",
+      "display_name": "Vision Transformer (brain MRI)",
+      "area": "medical",
+      "domain": "medical",
+      "task": "classification",
+      "modality": "image",
+      "framework": "PyTorch (transfer learning)",
+      "architecture": "vit",
+      "builder": "vit",
+      "build_kwargs": {},
+      "input": {
+        "modality": "image",
+        "size": 224,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "224x224 RGB MRI slice"
+      },
+      "outputs": "4 class probabilities",
+      "classes": [
+        "glioma",
+        "meningioma",
+        "no-tumor",
+        "pituitary"
+      ],
+      "n_classes": 4,
+      "dataset": "Brain MRI tumor classification (4-class)",
+      "dataset_key": "brain_mri_cls",
+      "metrics": {},
+      "metric_names": [
+        "accuracy",
+        "precision_macro",
+        "recall_macro",
+        "f1_macro"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "medical/brain_vit/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "Genuinely ImageNet-pretrained timm 'vit_tiny_patch16_224' (5.5M params, ~22MB artifact) fine-tuned end-to-end. Replaces the previous randomly-initialised CompactViT, which scored chance-level (0.0410) accuracy on 25-class plant disease.",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "brain_unet",
+      "display_name": "U-Net (brain tumor segmentation)",
+      "area": "medical",
+      "domain": "medical",
+      "task": "segmentation",
+      "modality": "image",
+      "framework": "PyTorch (from scratch)",
+      "architecture": "unet",
+      "builder": "unet",
+      "build_kwargs": {},
+      "input": {
+        "modality": "image",
+        "size": 224,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "224x224 RGB MRI slice"
+      },
+      "outputs": "224x224 binary tumor mask",
+      "classes": [
+        "background",
+        "tumor"
+      ],
+      "n_classes": 2,
+      "dataset": "Brain tumor segmentation (instance polygons unioned to a binary mask)",
+      "dataset_key": "brain_seg",
+      "metrics": {},
+      "metric_names": [
+        "dice",
+        "iou"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "medical/brain_unet/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "Binary target derived from the source dataset's COCO tumour polygons.",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "brain_yolo",
+      "display_name": "YOLO-style (brain tumor detection)",
+      "area": "medical",
+      "domain": "medical",
+      "task": "detection",
+      "modality": "image",
+      "framework": "PyTorch (anchor-free, from scratch)",
+      "architecture": "yolo",
+      "builder": "yolo",
+      "build_kwargs": {
+        "grid": 14
+      },
+      "input": {
+        "modality": "image",
+        "size": 448,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "448x448 RGB MRI slice"
+      },
+      "outputs": "boxes + objectness",
+      "classes": [
+        "label_0",
+        "label_1"
+      ],
+      "n_classes": 2,
+      "dataset": "Brain tumor detection (COCO boxes)",
+      "dataset_key": "brain_det",
+      "metrics": {},
+      "metric_names": [
+        "mAP@50"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "medical/brain_yolo/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "Source dataset ships two un-named numeric labels; reported as label_0/label_1.",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "brain_maskrcnn",
+      "display_name": "Mask R-CNN (brain tumor instances)",
+      "area": "medical",
+      "domain": "medical",
+      "task": "instance_segmentation",
+      "modality": "image",
+      "framework": "PyTorch (torchvision)",
+      "architecture": "maskrcnn",
+      "builder": "maskrcnn",
+      "build_kwargs": {},
+      "input": {
+        "modality": "image",
+        "size": 256,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "variable-size MRI slice (resized to 256x256)"
+      },
+      "outputs": "instances: box + label + mask",
+      "classes": [
+        "Tumor",
+        "0"
+      ],
+      "n_classes": 2,
+      "dataset": "Brain tumor instance segmentation (COCO polygons)",
+      "dataset_key": "brain_instseg",
+      "metrics": {},
+      "metric_names": [
+        "mask_AP@50",
+        "box_AP@50"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "medical/brain_maskrcnn/model.pt",
+        "hf_revision": null
+      },
+      "status": "DEFERRED",
+      "verification": null,
+      "limitations": "",
+      "note": "",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "plant_cnn",
+      "display_name": "CNN (plant leaf)",
+      "area": "agriculture",
+      "domain": "agriculture",
+      "task": "classification",
+      "modality": "image",
+      "framework": "PyTorch (from scratch)",
+      "architecture": "cnn",
+      "builder": "cnn",
+      "build_kwargs": {},
+      "input": {
+        "modality": "image",
+        "size": 224,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "224x224 RGB leaf image"
+      },
+      "outputs": "25 class probabilities",
+      "classes": [
+        "Apple___Apple_scab",
+        "Apple___Black_rot",
+        "Apple___Cedar_apple_rust",
+        "Apple___healthy",
+        "Corn___Cercospora_leaf_spot",
+        "Corn___Common_rust",
+        "Corn___Northern_Leaf_Blight",
+        "Corn___healthy",
+        "Grape___Black_rot",
+        "Grape___Esca_(Black_Measles)",
+        "Grape___Leaf_blight",
+        "Grape___healthy",
+        "Potato___Early_blight",
+        "Potato___Late_blight",
+        "Potato___healthy",
+        "Tomato___Bacterial_spot",
+        "Tomato___Early_blight",
+        "Tomato___Late_blight",
+        "Tomato___Leaf_Mold",
+        "Tomato___Septoria_leaf_spot",
+        "Tomato___Spider_mites",
+        "Tomato___Target_Spot",
+        "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+        "Tomato___Tomato_mosaic_virus",
+        "Tomato___healthy"
+      ],
+      "n_classes": 25,
+      "dataset": "Plant leaf disease (25-class)",
+      "dataset_key": "plant_cls",
+      "metrics": {},
+      "metric_names": [
+        "accuracy",
+        "precision_macro",
+        "recall_macro",
+        "f1_macro"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "agriculture/plant_cnn/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "plant_densenet",
+      "display_name": "DenseNet121 (plant leaf)",
+      "area": "agriculture",
+      "domain": "agriculture",
+      "task": "classification",
+      "modality": "image",
+      "framework": "PyTorch (transfer learning)",
+      "architecture": "densenet",
+      "builder": "densenet",
+      "build_kwargs": {},
+      "input": {
+        "modality": "image",
+        "size": 224,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "224x224 RGB leaf image"
+      },
+      "outputs": "25 class probabilities",
+      "classes": [
+        "Apple___Apple_scab",
+        "Apple___Black_rot",
+        "Apple___Cedar_apple_rust",
+        "Apple___healthy",
+        "Corn___Cercospora_leaf_spot",
+        "Corn___Common_rust",
+        "Corn___Northern_Leaf_Blight",
+        "Corn___healthy",
+        "Grape___Black_rot",
+        "Grape___Esca_(Black_Measles)",
+        "Grape___Leaf_blight",
+        "Grape___healthy",
+        "Potato___Early_blight",
+        "Potato___Late_blight",
+        "Potato___healthy",
+        "Tomato___Bacterial_spot",
+        "Tomato___Early_blight",
+        "Tomato___Late_blight",
+        "Tomato___Leaf_Mold",
+        "Tomato___Septoria_leaf_spot",
+        "Tomato___Spider_mites",
+        "Tomato___Target_Spot",
+        "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+        "Tomato___Tomato_mosaic_virus",
+        "Tomato___healthy"
+      ],
+      "n_classes": 25,
+      "dataset": "Plant leaf disease (25-class)",
+      "dataset_key": "plant_cls",
+      "metrics": {},
+      "metric_names": [
+        "accuracy",
+        "precision_macro",
+        "recall_macro",
+        "f1_macro"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "agriculture/plant_densenet/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "ImageNet-pretrained backbone, fine-tuned head.",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "plant_vit",
+      "display_name": "Vision Transformer (plant leaf)",
+      "area": "agriculture",
+      "domain": "agriculture",
+      "task": "classification",
+      "modality": "image",
+      "framework": "PyTorch (transfer learning)",
+      "architecture": "vit",
+      "builder": "vit",
+      "build_kwargs": {},
+      "input": {
+        "modality": "image",
+        "size": 224,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "224x224 RGB leaf image"
+      },
+      "outputs": "25 class probabilities",
+      "classes": [
+        "Apple___Apple_scab",
+        "Apple___Black_rot",
+        "Apple___Cedar_apple_rust",
+        "Apple___healthy",
+        "Corn___Cercospora_leaf_spot",
+        "Corn___Common_rust",
+        "Corn___Northern_Leaf_Blight",
+        "Corn___healthy",
+        "Grape___Black_rot",
+        "Grape___Esca_(Black_Measles)",
+        "Grape___Leaf_blight",
+        "Grape___healthy",
+        "Potato___Early_blight",
+        "Potato___Late_blight",
+        "Potato___healthy",
+        "Tomato___Bacterial_spot",
+        "Tomato___Early_blight",
+        "Tomato___Late_blight",
+        "Tomato___Leaf_Mold",
+        "Tomato___Septoria_leaf_spot",
+        "Tomato___Spider_mites",
+        "Tomato___Target_Spot",
+        "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+        "Tomato___Tomato_mosaic_virus",
+        "Tomato___healthy"
+      ],
+      "n_classes": 25,
+      "dataset": "Plant leaf disease (25-class)",
+      "dataset_key": "plant_cls",
+      "metrics": {},
+      "metric_names": [
+        "accuracy",
+        "precision_macro",
+        "recall_macro",
+        "f1_macro"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "agriculture/plant_vit/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "plant_unet",
+      "display_name": "U-Net (leaf disease segmentation)",
+      "area": "agriculture",
+      "domain": "agriculture",
+      "task": "segmentation",
+      "modality": "image",
+      "framework": "PyTorch (from scratch)",
+      "architecture": "unet",
+      "builder": "unet",
+      "build_kwargs": {},
+      "input": {
+        "modality": "image",
+        "size": 224,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "224x224 RGB leaf image"
+      },
+      "outputs": "224x224 binary disease mask",
+      "classes": [
+        "background",
+        "disease"
+      ],
+      "n_classes": 2,
+      "dataset": "Leaf disease segmentation (binary masks)",
+      "dataset_key": "plant_seg",
+      "metrics": {},
+      "metric_names": [
+        "dice",
+        "iou"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "agriculture/plant_unet/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "plant_yolo",
+      "display_name": "YOLO-style (cotton leaf detection)",
+      "area": "agriculture",
+      "domain": "agriculture",
+      "task": "detection",
+      "modality": "image",
+      "framework": "PyTorch (anchor-free, from scratch)",
+      "architecture": "yolo",
+      "builder": "yolo",
+      "build_kwargs": {
+        "grid": 14
+      },
+      "input": {
+        "modality": "image",
+        "size": 448,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "448x448 RGB leaf image"
+      },
+      "outputs": "boxes + objectness",
+      "classes": [
+        "cotton-plant-disease",
+        "dc"
+      ],
+      "n_classes": 2,
+      "dataset": "Cotton leaf disease detection (COCO boxes)",
+      "dataset_key": "cotton_det",
+      "metrics": {},
+      "metric_names": [
+        "mAP@50"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "agriculture/plant_yolo/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "plant_maskrcnn",
+      "display_name": "Mask R-CNN (leaf instances)",
+      "area": "agriculture",
+      "domain": "agriculture",
+      "task": "instance_segmentation",
+      "modality": "image",
+      "framework": "PyTorch (torchvision)",
+      "architecture": "maskrcnn",
+      "builder": "maskrcnn",
+      "build_kwargs": {},
+      "input": {
+        "modality": "image",
+        "size": 256,
+        "channels": 3,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "variable-size leaf image (resized to 256x256)"
+      },
+      "outputs": "instances: box + label + mask",
+      "classes": [
+        "leaf",
+        "disease"
+      ],
+      "n_classes": 2,
+      "dataset": "Leaf instance segmentation (COCO polygons)",
+      "dataset_key": "plant_instseg",
+      "metrics": {},
+      "metric_names": [
+        "mask_AP@50",
+        "box_AP@50"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "agriculture/plant_maskrcnn/model.pt",
+        "hf_revision": null
+      },
+      "status": "BLOCKED",
+      "verification": null,
+      "limitations": "No agriculture instance-segmentation dataset is available on the HuggingFace datasets-server parquet mirror. daiv05/corn-leaf-instance-segmentation exists but has no parquet conversion (0 rows, config-size failed), so it cannot be fetched offline. This model has no trained weights and is not selectable.",
+      "note": "No agriculture instance-segmentation dataset is available on the HuggingFace datasets-server parquet mirror. daiv05/corn-leaf-instance-segmentation exists but has no parquet conversion (0 rows, config-size failed), so it cannot be fetched offline. This model has no trained weights and is not selectable.",
+      "is_cv": true,
+      "lab": false
+    },
+    {
+      "model_id": "lab01",
+      "display_name": "01 \u00b7 ANN / MLP",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "tabular_classification",
+      "modality": "tabular",
+      "framework": "PyTorch",
+      "architecture": "lab:1",
+      "builder": "lab:1",
+      "build_kwargs": {
+        "in_features": 30,
+        "n_classes": 2
+      },
+      "input": {
+        "modality": "tabular",
+        "size": 0,
+        "channels": 30,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "30 numeric cell-nucleus features"
+      },
+      "outputs": "2 class probabilities",
+      "classes": [
+        "malignant",
+        "benign"
+      ],
+      "n_classes": 2,
+      "dataset": "Breast Cancer Wisconsin (Diagnostic)",
+      "dataset_key": "breast_cancer",
+      "metrics": {
+        "accuracy": 0.9561,
+        "f1_binary": 0.9526
+      },
+      "metric_names": [
+        "accuracy",
+        "f1_binary"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 60,
+        "optimizer": "adam"
+      },
+      "weights_bytes": 19261,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab01.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab01/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab02",
+      "display_name": "02 \u00b7 CNN",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "classification",
+      "modality": "image",
+      "framework": "PyTorch",
+      "architecture": "lab:2",
+      "builder": "lab:2",
+      "build_kwargs": {
+        "n_classes": 10,
+        "in_ch": 1
+      },
+      "input": {
+        "modality": "image",
+        "size": 28,
+        "channels": 1,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "28x28 grayscale image"
+      },
+      "outputs": "10 class probabilities",
+      "classes": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "n_classes": 10,
+      "dataset": "MNIST handwritten digits",
+      "dataset_key": "mnist",
+      "metrics": {
+        "accuracy": 0.9324,
+        "f1_macro": 0.9315
+      },
+      "metric_names": [
+        "accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 15,
+        "batch_size": 128,
+        "train_n": 50000,
+        "test_n": 10000,
+        "seed": 42
+      },
+      "weights_bytes": 80701,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab02.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab02/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab03",
+      "display_name": "03 \u00b7 RNN",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "sequence_classification",
+      "modality": "sequence",
+      "framework": "PyTorch",
+      "architecture": "lab:3",
+      "builder": "lab:3",
+      "build_kwargs": {
+        "n_classes": 6,
+        "feat": 9
+      },
+      "input": {
+        "modality": "sequence",
+        "size": 0,
+        "channels": 0,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "128x9 inertial sensor window"
+      },
+      "outputs": "6 class probabilities",
+      "classes": [
+        "walking",
+        "upstairs",
+        "downstairs",
+        "sitting",
+        "standing",
+        "laying"
+      ],
+      "n_classes": 6,
+      "dataset": "UCI Smartphone HAR",
+      "dataset_key": "har",
+      "metrics": {
+        "accuracy": 0.6216
+      },
+      "metric_names": [
+        "accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 12,
+        "batch_size": 128,
+        "train_n": 7352,
+        "test_n": 2947,
+        "split": "official UCI train/test"
+      },
+      "weights_bytes": 23357,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab03.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab03/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "Sequence model on raw inertial signals.",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab04",
+      "display_name": "04 \u00b7 LSTM",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "sequence_classification",
+      "modality": "sequence",
+      "framework": "PyTorch",
+      "architecture": "lab:4",
+      "builder": "lab:4",
+      "build_kwargs": {
+        "n_classes": 6,
+        "feat": 9
+      },
+      "input": {
+        "modality": "sequence",
+        "size": 0,
+        "channels": 0,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "128x9 inertial sensor window"
+      },
+      "outputs": "6 class probabilities",
+      "classes": [
+        "walking",
+        "upstairs",
+        "downstairs",
+        "sitting",
+        "standing",
+        "laying"
+      ],
+      "n_classes": 6,
+      "dataset": "UCI Smartphone HAR",
+      "dataset_key": "har",
+      "metrics": {
+        "accuracy": 0.8775
+      },
+      "metric_names": [
+        "accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 12,
+        "batch_size": 128,
+        "train_n": 7352,
+        "test_n": 2947,
+        "split": "official UCI train/test"
+      },
+      "weights_bytes": 80957,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab04.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab04/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab05",
+      "display_name": "05 \u00b7 GRU",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "sequence_classification",
+      "modality": "sequence",
+      "framework": "PyTorch",
+      "architecture": "lab:5",
+      "builder": "lab:5",
+      "build_kwargs": {
+        "n_classes": 6,
+        "feat": 9
+      },
+      "input": {
+        "modality": "sequence",
+        "size": 0,
+        "channels": 0,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "128x9 inertial sensor window"
+      },
+      "outputs": "6 class probabilities",
+      "classes": [
+        "walking",
+        "upstairs",
+        "downstairs",
+        "sitting",
+        "standing",
+        "laying"
+      ],
+      "n_classes": 6,
+      "dataset": "UCI Smartphone HAR",
+      "dataset_key": "har",
+      "metrics": {
+        "accuracy": 0.9053
+      },
+      "metric_names": [
+        "accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 12,
+        "batch_size": 128,
+        "train_n": 7352,
+        "test_n": 2947,
+        "split": "official UCI train/test"
+      },
+      "weights_bytes": 61757,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab05.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab05/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab06",
+      "display_name": "06 \u00b7 Autoencoder",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "reconstruction",
+      "modality": "image",
+      "framework": "PyTorch",
+      "architecture": "lab:6",
+      "builder": "lab:6",
+      "build_kwargs": {
+        "latent": 32
+      },
+      "input": {
+        "modality": "image",
+        "size": 28,
+        "channels": 1,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "28x28 grayscale image"
+      },
+      "outputs": "28x28 reconstruction",
+      "classes": [],
+      "n_classes": 0,
+      "dataset": "MNIST handwritten digits",
+      "dataset_key": "mnist",
+      "metrics": {
+        "recon_mse": 0.02668
+      },
+      "metric_names": [
+        "recon_mse"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 8,
+        "loss": "mse"
+      },
+      "weights_bytes": 842993,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab06.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab06/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab07",
+      "display_name": "07 \u00b7 VAE",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "reconstruction",
+      "modality": "image",
+      "framework": "PyTorch",
+      "architecture": "lab:7",
+      "builder": "lab:7",
+      "build_kwargs": {
+        "latent": 32
+      },
+      "input": {
+        "modality": "image",
+        "size": 28,
+        "channels": 1,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "28x28 grayscale image"
+      },
+      "outputs": "28x28 reconstruction + latent",
+      "classes": [],
+      "n_classes": 0,
+      "dataset": "MNIST handwritten digits",
+      "dataset_key": "mnist",
+      "metrics": {
+        "recon_bce": 0.14114,
+        "kl": 5.4373
+      },
+      "metric_names": [
+        "recon_bce",
+        "kl"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 8,
+        "loss": "bce + beta*kl"
+      },
+      "weights_bytes": 859813,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab07.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab07/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab08",
+      "display_name": "08 \u00b7 GAN (discriminator)",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "binary_classification",
+      "modality": "image",
+      "framework": "PyTorch",
+      "architecture": "lab:8",
+      "builder": "lab:8",
+      "build_kwargs": {},
+      "input": {
+        "modality": "image",
+        "size": 28,
+        "channels": 1,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "28x28 grayscale image"
+      },
+      "outputs": "real/fake score",
+      "classes": [
+        "generated",
+        "real"
+      ],
+      "n_classes": 2,
+      "dataset": "MNIST handwritten digits",
+      "dataset_key": "mnist",
+      "metrics": {
+        "real_score_mean": 0.824,
+        "accuracy": 0.824
+      },
+      "metric_names": [
+        "accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 8,
+        "note": "discriminator artifact; generator trained jointly"
+      },
+      "weights_bytes": 807177,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab08.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab08/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab09",
+      "display_name": "09 \u00b7 Transformer",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "text_classification",
+      "modality": "text",
+      "framework": "PyTorch",
+      "architecture": "lab:9",
+      "builder": "lab:9",
+      "build_kwargs": {
+        "vocab": 4096,
+        "dim": 64,
+        "n_classes": 4,
+        "length": 64
+      },
+      "input": {
+        "modality": "text",
+        "size": 0,
+        "channels": 0,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "text -> 64 tokens"
+      },
+      "outputs": "4 class probabilities",
+      "classes": [
+        "comp.graphics",
+        "sci.space",
+        "rec.sport.baseball",
+        "talk.politics.misc"
+      ],
+      "n_classes": 4,
+      "dataset": "20 Newsgroups (4 classes)",
+      "dataset_key": "newsgroups",
+      "metrics": {
+        "accuracy": 0.0
+      },
+      "metric_names": [
+        "accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 4,
+        "batch_size": 64,
+        "train_n": 0,
+        "length": 64,
+        "vocab": 4096
+      },
+      "weights_bytes": 1325264,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab09.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab09/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab10",
+      "display_name": "10 \u00b7 BERT-style",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "text_classification",
+      "modality": "text",
+      "framework": "PyTorch",
+      "architecture": "lab:10",
+      "builder": "lab:10",
+      "build_kwargs": {
+        "vocab": 4096,
+        "dim": 64,
+        "n_classes": 4,
+        "length": 64
+      },
+      "input": {
+        "modality": "text",
+        "size": 0,
+        "channels": 0,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "text -> 64 tokens"
+      },
+      "outputs": "4 class probabilities",
+      "classes": [
+        "comp.graphics",
+        "sci.space",
+        "rec.sport.baseball",
+        "talk.politics.misc"
+      ],
+      "n_classes": 4,
+      "dataset": "20 Newsgroups (4 classes)",
+      "dataset_key": "newsgroups",
+      "metrics": {
+        "accuracy": 0.0
+      },
+      "metric_names": [
+        "accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 4,
+        "batch_size": 64,
+        "train_n": 0,
+        "length": 64,
+        "vocab": 4096
+      },
+      "weights_bytes": 1325264,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab10.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab10/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab11",
+      "display_name": "11 \u00b7 GPT-style",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "language_modeling",
+      "modality": "text",
+      "framework": "PyTorch",
+      "architecture": "lab:11",
+      "builder": "lab:11",
+      "build_kwargs": {
+        "vocab": 96,
+        "dim": 96
+      },
+      "input": {
+        "modality": "text",
+        "size": 0,
+        "channels": 0,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "text prompt -> tokens"
+      },
+      "outputs": "next-token logits",
+      "classes": [],
+      "n_classes": 0,
+      "dataset": "20 Newsgroups corpus",
+      "dataset_key": "newsgroups",
+      "metrics": {
+        "perplexity": 11.36
+      },
+      "metric_names": [
+        "perplexity"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 4,
+        "batch_size": 64,
+        "length": 96
+      },
+      "weights_bytes": 778763,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab11.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab11/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab12",
+      "display_name": "12 \u00b7 ResNet",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "classification",
+      "modality": "image",
+      "framework": "PyTorch",
+      "architecture": "lab:12",
+      "builder": "lab:12",
+      "build_kwargs": {
+        "n_classes": 10,
+        "in_ch": 1
+      },
+      "input": {
+        "modality": "image",
+        "size": 28,
+        "channels": 1,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "28x28 grayscale image"
+      },
+      "outputs": "10 class probabilities",
+      "classes": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "n_classes": 10,
+      "dataset": "MNIST handwritten digits",
+      "dataset_key": "mnist",
+      "metrics": {
+        "accuracy": 0.852,
+        "f1_macro": 0.8489
+      },
+      "metric_names": [
+        "accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 15,
+        "batch_size": 128,
+        "train_n": 50000,
+        "test_n": 10000,
+        "seed": 42
+      },
+      "weights_bytes": 22897,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab12/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab13",
+      "display_name": "13 \u00b7 DenseNet",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "classification",
+      "modality": "image",
+      "framework": "PyTorch",
+      "architecture": "lab:13",
+      "builder": "lab:13",
+      "build_kwargs": {
+        "n_classes": 10,
+        "in_ch": 1
+      },
+      "input": {
+        "modality": "image",
+        "size": 28,
+        "channels": 1,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "28x28 grayscale image"
+      },
+      "outputs": "10 class probabilities",
+      "classes": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "n_classes": 10,
+      "dataset": "MNIST handwritten digits",
+      "dataset_key": "mnist",
+      "metrics": {
+        "accuracy": 0.7975,
+        "f1_macro": 0.7948
+      },
+      "metric_names": [
+        "accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 15,
+        "batch_size": 128,
+        "train_n": 50000,
+        "test_n": 10000,
+        "seed": 42
+      },
+      "weights_bytes": 21617,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab13/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab14",
+      "display_name": "14 \u00b7 ViT",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "classification",
+      "modality": "image",
+      "framework": "PyTorch",
+      "architecture": "lab:14",
+      "builder": "lab:14",
+      "build_kwargs": {
+        "n_classes": 10,
+        "in_ch": 1
+      },
+      "input": {
+        "modality": "image",
+        "size": 28,
+        "channels": 1,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "28x28 grayscale image"
+      },
+      "outputs": "10 class probabilities",
+      "classes": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "n_classes": 10,
+      "dataset": "MNIST handwritten digits",
+      "dataset_key": "mnist",
+      "metrics": {
+        "accuracy": 0.5877,
+        "f1_macro": 0.5791
+      },
+      "metric_names": [
+        "accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 15,
+        "batch_size": 128,
+        "train_n": 50000,
+        "test_n": 10000,
+        "seed": 42
+      },
+      "weights_bytes": 280198,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab14/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab15",
+      "display_name": "15 \u00b7 U-Net",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "segmentation",
+      "modality": "image",
+      "framework": "PyTorch",
+      "architecture": "lab:15",
+      "builder": "lab:15",
+      "build_kwargs": {
+        "in_ch": 1
+      },
+      "input": {
+        "modality": "image",
+        "size": 28,
+        "channels": 1,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "28x28 grayscale image"
+      },
+      "outputs": "28x28 binary mask",
+      "classes": [
+        "background",
+        "foreground"
+      ],
+      "n_classes": 2,
+      "dataset": "MNIST foreground segmentation",
+      "dataset_key": "mnist_seg",
+      "metrics": {
+        "dice": 0.8628,
+        "iou": 0.7587
+      },
+      "metric_names": [
+        "dice",
+        "iou"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 6,
+        "loss": "bce_dice"
+      },
+      "weights_bytes": 7805,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab15.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab15/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab16",
+      "display_name": "16 \u00b7 YOLO-style",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "detection",
+      "modality": "image",
+      "framework": "PyTorch",
+      "architecture": "lab:16",
+      "builder": "lab:16",
+      "build_kwargs": {
+        "n_classes": 10,
+        "in_ch": 1,
+        "grid": 7,
+        "width": 16
+      },
+      "input": {
+        "modality": "image",
+        "size": 28,
+        "channels": 1,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ],
+        "description": "28x28 grayscale image"
+      },
+      "outputs": "7x7 grid detections",
+      "classes": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "n_classes": 10,
+      "dataset": "MNIST digit localisation",
+      "dataset_key": "mnist_det",
+      "metrics": {},
+      "metric_names": [
+        "mAP@50"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {},
+      "weights_bytes": null,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": null,
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab16/model.pt",
+        "hf_revision": null
+      },
+      "status": "ARCH_ONLY",
+      "verification": null,
+      "limitations": "",
+      "note": "architecture implemented; no trained weights in this checkout",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab17",
+      "display_name": "17 \u00b7 Siamese",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "metric_learning",
+      "modality": "image_pair",
+      "framework": "PyTorch",
+      "architecture": "lab:17",
+      "builder": "lab:17",
+      "build_kwargs": {
+        "in_ch": 1,
+        "emb": 32
+      },
+      "input": {
+        "modality": "image_pair",
+        "size": 28,
+        "channels": 1,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "two 28x28 grayscale images"
+      },
+      "outputs": "embedding distance",
+      "classes": [],
+      "n_classes": 0,
+      "dataset": "MNIST handwritten digits",
+      "dataset_key": "mnist",
+      "metrics": {
+        "pair_accuracy": 0.948
+      },
+      "metric_names": [
+        "pair_accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 6,
+        "loss": "contrastive"
+      },
+      "weights_bytes": 222781,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab17.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab17/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab18",
+      "display_name": "18 \u00b7 Seq2Seq",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "sequence_to_sequence",
+      "modality": "text",
+      "framework": "PyTorch",
+      "architecture": "lab:18",
+      "builder": "lab:18",
+      "build_kwargs": {
+        "vocab": 96,
+        "dim": 96
+      },
+      "input": {
+        "modality": "text",
+        "size": 0,
+        "channels": 0,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "noisy text -> tokens"
+      },
+      "outputs": "reconstructed token logits",
+      "classes": [],
+      "n_classes": 0,
+      "dataset": "20 Newsgroups corpus",
+      "dataset_key": "newsgroups",
+      "metrics": {
+        "perplexity": 11.05
+      },
+      "metric_names": [
+        "char_accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 4,
+        "batch_size": 64,
+        "length": 96
+      },
+      "weights_bytes": 524704,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab18.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab18/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab19",
+      "display_name": "19 \u00b7 Diffusion MLP",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "tabular_denoising",
+      "modality": "tabular",
+      "framework": "PyTorch",
+      "architecture": "lab:19",
+      "builder": "lab:19",
+      "build_kwargs": {
+        "dim": 30
+      },
+      "input": {
+        "modality": "tabular",
+        "size": 0,
+        "channels": 30,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "30 numeric features + noise level"
+      },
+      "outputs": "predicted noise (30 dims)",
+      "classes": [],
+      "n_classes": 0,
+      "dataset": "Breast Cancer Wisconsin (Diagnostic)",
+      "dataset_key": "breast_cancer",
+      "metrics": {
+        "denoise_mse": 0.08571
+      },
+      "metric_names": [
+        "denoise_mse"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "steps": 400,
+        "loss": "noise_prediction_mse"
+      },
+      "weights_bytes": 100605,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab19.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab19/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    },
+    {
+      "model_id": "lab20",
+      "display_name": "20 \u00b7 GNN",
+      "area": "lab",
+      "domain": "laboratory",
+      "task": "graph_classification",
+      "modality": "graph",
+      "framework": "PyTorch",
+      "architecture": "lab:20",
+      "builder": "lab:20",
+      "build_kwargs": {
+        "in_features": 1433,
+        "hidden": 64,
+        "n_classes": 7
+      },
+      "input": {
+        "modality": "graph",
+        "size": 0,
+        "channels": 0,
+        "mean": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "std": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "description": "1433-dim node features + adjacency"
+      },
+      "outputs": "7 class probabilities",
+      "classes": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "n_classes": 7,
+      "dataset": "Cora citation network",
+      "dataset_key": "cora",
+      "metrics": {
+        "accuracy": 0.2269
+      },
+      "metric_names": [
+        "accuracy"
+      ],
+      "test_set_size": null,
+      "split_manifest": {},
+      "training": {
+        "epochs": 60,
+        "train_n": 1624,
+        "test_n": 542
+      },
+      "weights_bytes": 388157,
+      "weights_sha256": null,
+      "checkpoint": {
+        "kind": "huggingface",
+        "local_path": "artifacts/lab/lab20.pt",
+        "hf_repo": "KararDeepVision/deep-learning-models",
+        "hf_path": "laboratories/lab20/model.pt",
+        "hf_revision": null
+      },
+      "status": "TRAINED_UNVERIFIED",
+      "verification": null,
+      "limitations": "",
+      "note": "weights present locally; fresh-download verification not recorded",
+      "is_cv": false,
+      "lab": true
+    }
+  ]
+}

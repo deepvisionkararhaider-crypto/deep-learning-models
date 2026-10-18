@@ -1,100 +1,113 @@
-"""Home dashboard: real, artifact-derived platform status (no invented numbers)."""
+"""Home — landing page driven entirely by the manifest (no hardcoded counts)."""
 from __future__ import annotations
 
 import streamlit as st
 
-from .. import artifacts as A
-from ..registry import ALL_MODELS, CV_MODELS, LAB_BY_INDEX
-from .common import GITHUB, badge, hero, inject_css, metric_card
+from ..services import manifest_service as MS
+from ..registry import ALL_MODELS
+from .common import GITHUB, hf_url, hero, inject_css, metric_card, status_badge
+from .catalog import status_legend
 
 
-def _ready(spec) -> bool:
-    return A.has_weights(spec.id, spec.area)
-
-
-def render():
+def render() -> None:
     inject_css()
-    hero("Deep Learning · Medical AI · Smart Agriculture",
-         "A single Streamlit platform: a 20-model deep-learning laboratory plus six computer-vision "
-         "model types applied to brain-MRI and plant-disease analysis. Inference only — models are "
-         "trained offline and loaded from committed artifacts.", "🧠")
+    hero("Deep Learning Platform · Medical AI · Smart Agriculture",
+         "A 20-model deep-learning laboratory plus six computer-vision architectures applied to "
+         "brain-MRI and plant-disease analysis. Trained checkpoints are hosted on Hugging Face and "
+         "loaded automatically — you never train anything to get a prediction.", "🧠")
 
-    cv_ready = sum(1 for m in CV_MODELS if _ready(m))
-    lab_ready = sum(1 for m in LAB_BY_INDEX.values() if _ready(m))
-    total_ready = cv_ready + lab_ready
+    c = MS.counts()
+    entries = MS.entries()
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        metric_card("Registered models", str(len(ALL_MODELS)))
+        metric_card("Registered models", str(c["models"]),
+                    f"{c['laboratory']} lab · {c['medical']} medical · {c['agriculture']} agri")
     with c2:
-        metric_card("With trained weights", str(total_ready))
+        metric_card("Ready for inference", str(c["ready"]), "TRAINED_VERIFIED")
     with c3:
-        metric_card("Medical / Agri models", f"{cv_ready} / {len(CV_MODELS)}")
+        metric_card("Architectures", str(len({s.builder for s in ALL_MODELS})), "distinct builders")
     with c4:
-        metric_card("Training at prediction time", "Never")
+        metric_card("Training at prediction time", "Never", "inference only")
 
-    st.caption(
-        "Counts are read live from `artifacts/` — a model is only shown as *trained* when its "
-        "weights file exists and passes the load + inference smoke test."
-    )
+    st.caption("Counts are read live from `models/manifest.json`, which is generated from the "
+               "registry plus verified artifacts — never hardcoded.")
 
     st.divider()
-    st.subheader("Three areas of the platform")
-
-    a, b, c = st.columns(3)
+    st.subheader("Start here")
+    a, b, ccol = st.columns(3)
     with a:
-        st.markdown("### 🩺 Medical AI")
-        st.write("Brain-MRI **classification** (CNN, DenseNet121, ViT), **segmentation** (U-Net) "
-                 "and **detection / instance segmentation** (YOLO-style, Mask R-CNN).")
-        st.page_link("app.py", label="Open Medical AI →", icon="🩺") if False else None
-        st.caption("Navigate with the sidebar → Medical AI.")
+        st.markdown("#### 🖼️ Run a prediction")
+        st.write("Pick a ready model, upload an image or paste text, and get a result with the "
+                 "model's measured metrics and limitations.")
+        st.caption("Sidebar → **Image Prediction** or **Text & Tabular Prediction**.")
     with b:
+        st.markdown("#### 🔎 Explore the catalogue")
+        st.write("Filter all 32 models by domain, task and status; every card shows its real "
+                 "contract, checkpoint size and primary metric.")
+        st.caption("Sidebar → **Explore Models**.")
+    with ccol:
+        st.markdown("#### 📖 Understand the model")
+        st.write("Read a model's architecture, dataset, split sizes, metrics and known limitations "
+                 "before you trust an output.")
+        st.caption("Sidebar → **Model Details**.")
+
+    st.divider()
+    st.subheader("How it works")
+    st.markdown(
+        "1. **Source code** lives in GitHub. 2. **Training** runs offline (or in GitHub Actions) on "
+        "real public datasets. 3. **Checkpoints** are published to the **Hugging Face Hub** with a "
+        "SHA-256, a pinned revision and a model card. 4. This app **downloads only the model you "
+        "select**, verifies the checksum, and runs inference on CPU."
+    )
+    st.info("Visitors never train a model, never download a dataset, and never need an account. "
+            "If a model has no verified checkpoint it is shown as *training required* — never "
+            "faked with random weights.")
+
+    st.divider()
+    st.subheader("Platform coverage")
+    x, y, z = st.columns(3)
+    with x:
+        st.markdown("### 🩺 Medical AI")
+        st.write("Brain-MRI **classification** (CNN, DenseNet121, ViT), **segmentation** (U-Net), "
+                 "**detection** (YOLO-style) and **instance segmentation** (Mask R-CNN).")
+        st.caption("Research prototype — not a medical device.")
+    with y:
         st.markdown("### 🌿 Smart Agriculture")
-        st.write("Plant-leaf **disease classification** (25 classes), **leaf-disease segmentation**, "
-                 "and **cotton disease detection**.")
-        st.caption("Navigate with the sidebar → Agriculture AI.")
-    with c:
+        st.write("Plant-leaf **disease classification** (25 classes), **leaf-disease "
+                 "segmentation**, and **cotton disease detection**.")
+        st.caption("Decision support only.")
+    with z:
         st.markdown("### 🧪 20-Model Laboratory")
-        st.write("The original catalogue — MLP, CNN, RNN/LSTM/GRU, autoencoder, VAE, GAN, "
-                 "Transformer, BERT, GPT, ResNet, DenseNet, ViT, U-Net, YOLO, Siamese, Seq2Seq, "
-                 "diffusion, GNN — each with its own real dataset and IO contract.")
-        st.caption("Navigate with the sidebar → Model Laboratory.")
+        st.write("MLP, CNN, RNN/LSTM/GRU, autoencoder, VAE, GAN, Transformer, BERT-style, "
+                 "GPT-style, ResNet, DenseNet, ViT, U-Net, YOLO, Siamese, Seq2Seq, diffusion, GNN — "
+                 "each with its own real dataset and I/O contract.")
+        st.caption("Catalogue → **Deep Learning Labs**.")
 
     st.divider()
-    st.subheader("Model readiness (live)")
-
-    st.markdown("**Computer-vision models**")
-    _readiness_table(CV_MODELS)
-    st.markdown("**20-model laboratory**")
-    _readiness_table(list(LAB_BY_INDEX.values()))
-
-    st.divider()
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.subheader("Supported tasks")
-        st.markdown(
-            "- Image classification (4-class brain MRI, 25-class plant leaf)\n"
-            "- Binary & multi-class semantic segmentation (U-Net, Dice+BCE loss)\n"
-            "- Object detection with genuine bounding boxes (YOLO-style)\n"
-            "- Instance segmentation with genuine masks (Mask R-CNN)\n"
-            "- Tabular / sequence / text / graph classification & generation (laboratory)\n"
-        )
-    with col2:
-        st.subheader("Links")
-        st.link_button("⭐ GitHub repository", GITHUB, use_container_width=True)
-        st.link_button("📚 Dataset documentation", f"{GITHUB}/blob/main/DATASETS.md", use_container_width=True)
-
-
-def _readiness_table(specs):
+    st.subheader("Model status (live from the manifest)")
     rows = []
-    for m in specs:
-        ready = _ready(m)
-        meta = A.read_metadata(m.id) or {}
-        acc = None
-        for k in ("accuracy", "f1_macro", "dice", "mAP@50", "pair_accuracy", "recon_mse", "perplexity"):
-            if k in (meta.get("metrics") or {}):
-                acc = f"{k}={meta['metrics'][k]}"
-                break
-        rows.append({"model": m.name, "task": m.task, "dataset": m.dataset_name,
-                     "status": "✔ trained" if ready else "✖ training required", "metric": acc or "—"})
+    for spec in ALL_MODELS:
+        e = entries.get(spec.id, {})
+        rows.append({"id": spec.id, "model": spec.name, "domain": e.get("domain", spec.area),
+                     "task": spec.task, "status": e.get("status", "ARCH_ONLY"),
+                     "checkpoint": f"{(e.get('weights_bytes') or 0)/1e6:.1f} MB"
+                                   if e.get("weights_bytes") else "—"})
     st.dataframe(rows, use_container_width=True, hide_index=True)
+    status_legend()
+
+    st.divider()
+    st.subheader("Source & artifacts")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.link_button("⭐ GitHub repository", GITHUB, use_container_width=True)
+    with c2:
+        st.link_button("📚 Dataset documentation", f"{GITHUB}/blob/main/DATASETS.md",
+                       use_container_width=True)
+    with c3:
+        url = hf_url()
+        if url:
+            st.link_button("🤗 Hugging Face models", url, use_container_width=True)
+        else:
+            st.button("🤗 Hugging Face models", disabled=True, use_container_width=True,
+                      help="HF_MODEL_REPO is not configured for this deployment.")

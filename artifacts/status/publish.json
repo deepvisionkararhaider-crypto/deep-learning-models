@@ -1,0 +1,66 @@
+{
+  "status": "OK",
+  "verified": [
+    "brain_cnn"
+  ],
+  "failed": {},
+  "results": [
+    {
+      "model_id": "brain_cnn",
+      "area": "medical",
+      "steps": {
+        "1_weights_exist": {
+          "path": "artifacts/medical/brain_cnn.pt",
+          "bytes": 980608
+        },
+        "2_structure_valid": {
+          "loaded": true,
+          "output_shape": [
+            1,
+            4
+          ],
+          "n_params": 242052
+        },
+        "3_sha256": "97e2b9eb767e2af0687346b63a8d302d64bb074184ab42771166bd46fcfb8bd5",
+        "4_assembled": [
+          "config.json",
+          "metrics.json",
+          "model.pt",
+          "model_card.md"
+        ],
+        "5_uploaded": {
+          "commit": "a8bab732d99e722a8c22c870f1257c41558863eb",
+          "repo": "KararDeepVision/deep-learning-models",
+          "dir": "medical/brain_cnn"
+        },
+        "6_remote_listed": {
+          "files": 5,
+          "revision": "a8bab732d99e722a8c22c870f1257c41558863eb"
+        },
+        "7_checksum_ok": {
+          "sha256": "97e2b9eb767e2af0687346b63a8d302d64bb074184ab42771166bd46fcfb8bd5",
+          "bytes": 980608
+        },
+        "8_downloaded": {
+          "config": "/tmp/verify-brain_cnn-hreamkkg/models--KararDeepVision--deep-learning-models/snapshots/a8bab732d99e722a8c22c870f1257c41558863eb/medical/brain_cnn/config.json",
+          "metrics": "/tmp/verify-brain_cnn-hreamkkg/models--KararDeepVision--deep-learning-models/snapshots/a8bab732d99e722a8c22c870f1257c41558863eb/medical/brain_cnn/metrics.json",
+          "weights": "/tmp/verify-brain_cnn-hreamkkg/models--KararDeepVision--deep-learning-models/snapshots/a8bab732d99e722a8c22c870f1257c41558863eb/medical/brain_cnn/model.pt",
+          "card": "/tmp/verify-brain_cnn-hreamkkg/models--KararDeepVision--deep-learning-models/snapshots/a8bab732d99e722a8c22c870f1257c41558863eb/medical/brain_cnn/model_card.md"
+        },
+        "9_fresh_inference": {
+          "loaded": true,
+          "output_shape": [
+            1,
+            4
+          ],
+          "n_params": 242052
+        }
+      },
+      "status": "TRAINED_VERIFIED",
+      "hf_repo": "KararDeepVision/deep-learning-models",
+      "hf_revision": "a8bab732d99e722a8c22c870f1257c41558863eb",
+      "weights_sha256": "97e2b9eb767e2af0687346b63a8d302d64bb074184ab42771166bd46fcfb8bd5",
+      "weights_bytes": 980608
+    }
+  ]
+}

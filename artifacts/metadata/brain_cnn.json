@@ -1,0 +1,138 @@
+{
+  "name": "CNN (brain MRI)",
+  "area": "medical",
+  "task": "classification",
+  "framework": "PyTorch (from scratch)",
+  "architecture": "cnn",
+  "dataset": "Brain MRI tumor classification (4-class)",
+  "dataset_key": "brain_mri_cls",
+  "classes": [
+    "glioma",
+    "meningioma",
+    "no-tumor",
+    "pituitary"
+  ],
+  "n_classes": 4,
+  "input": {
+    "size": 224,
+    "channels": 3,
+    "mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "desc": "224x224 RGB MRI slice"
+  },
+  "outputs": "4 class probabilities",
+  "metric_names": [
+    "accuracy",
+    "precision_macro",
+    "recall_macro",
+    "f1_macro"
+  ],
+  "metrics": {
+    "accuracy": 0.8585,
+    "precision_macro": 0.858,
+    "recall_macro": 0.8557,
+    "f1_macro": 0.8555,
+    "confusion_matrix": [
+      [
+        145,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        80,
+        7,
+        36
+      ],
+      [
+        0,
+        2,
+        109,
+        4
+      ],
+      [
+        1,
+        24,
+        2,
+        127
+      ]
+    ],
+    "n_test": 537,
+    "val": {
+      "accuracy": 0.8835,
+      "precision_macro": 0.8854,
+      "recall_macro": 0.8799,
+      "f1_macro": 0.8806,
+      "confusion_matrix": [
+        [
+          255,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          169,
+          18,
+          58
+        ],
+        [
+          0,
+          5,
+          267,
+          10
+        ],
+        [
+          0,
+          32,
+          2,
+          257
+        ]
+      ],
+      "n_test": 1073
+    },
+    "train_loss_curve": [
+      0.7273,
+      0.5926,
+      0.4973
+    ],
+    "split_sizes": {
+      "train": 2000,
+      "val": 1073,
+      "test": 537
+    }
+  },
+  "notes": "Trained from scratch; MRI is grayscale replicated to 3 channels.",
+  "split_manifest": {
+    "test": 537,
+    "train": 3759,
+    "validation": 1073
+  },
+  "trained": true,
+  "training": {
+    "epochs": 3,
+    "lr": 0.001,
+    "batch_size": 8,
+    "split_seed": 42,
+    "backbone": "from scratch",
+    "train_cap": 2000
+  },
+  "artifact_version": "2.0.0",
+  "model_id": "brain_cnn",
+  "weights_file": "artifacts/medical/brain_cnn.pt",
+  "weights_bytes": 980608,
+  "saved_at": "2026-10-14T19:35:57Z",
+  "python": "3.13.14",
+  "torch": "2.6.0+cpu",
+  "platform": "Linux-6.1.155-x86_64-with-glibc2.41",
+  "git_commit": "ed5a16fcb12efee2d4312501d81417e92c7eb7dd"
+}

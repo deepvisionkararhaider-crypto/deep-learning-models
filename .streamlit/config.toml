@@ -1,13 +1,27 @@
+# Streamlit configuration — compatible with Streamlit Community Cloud.
+# Community Cloud injects its own port/host, so nothing here binds an address.
+
 [server]
 headless = true
 enableCORS = false
 enableXsrfProtection = true
+# Uploads are validated in-app (15 MB, decode-checked) — this is a hard backstop.
+maxUploadSize = 20
 
 [browser]
 gatherUsageStats = false
 
 [theme]
+base = "light"
 primaryColor = "#1e3a8a"
 backgroundColor = "#ffffff"
 secondaryBackgroundColor = "#f1f5f9"
 textColor = "#0f172a"
+font = "sans serif"
+
+[client]
+showErrorDetails = true
+toolbarMode = "auto"
+
+[logger]
+level = "info"

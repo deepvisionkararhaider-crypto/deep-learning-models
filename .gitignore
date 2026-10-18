@@ -4,17 +4,54 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+env/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
 
+# ---------------------------------------------------------------------------
 # Datasets / training caches (re-downloadable, never committed)
+# ---------------------------------------------------------------------------
 .cache/
 .build/
 
-# Streamlit secrets
-.streamlit/secrets.toml
+# Interrupted-training resume state (scratch working files, not artifacts)
+artifacts/checkpoints/
 
+# ---------------------------------------------------------------------------
+# Secrets — NEVER commit these
+# ---------------------------------------------------------------------------
+.env
+.streamlit/secrets.toml
+*.pem
+*.key
+
+# ---------------------------------------------------------------------------
+# Large model checkpoints.
+#
+# Trained weights are published to the Hugging Face Hub (see HF_MODEL_REPO), not
+# committed here. These patterns are a safety net so a stray checkpoint cannot be
+# added to git by accident; the CI job in ci/validation-ci.yml also fails if a
+# tracked file exceeds the GitHub 100 MB limit.
+# ---------------------------------------------------------------------------
+*.pt
+*.pth
+*.bin
+*.ckpt
+*.safetensors
+*.onnx
+*.h5
+*.pkl
+*.joblib
+
+# ...but keep the tiny in-repo metadata/status JSON that IS source of truth.
+!artifacts/**/*.json
+
+# ---------------------------------------------------------------------------
 # OS / editor
+# ---------------------------------------------------------------------------
 .DS_Store
+Thumbs.db
 .idea/
 .vscode/
+*.swp
