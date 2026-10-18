@@ -57,7 +57,19 @@ def main() -> int:
 
     if args.check:
         current = Path(args.out)
-        if not current.is_file() or current.read_text(encoding="utf-8").strip() != text.strip():
+        # `generated_at` is a build timestamp, so it can never match on a rebuild.
+        # Compare everything else; a timestamp-only difference is not staleness.
+        def _payload(raw: str) -> str:
+            try:
+                data = json.loads(raw)
+            except Exception:
+                return raw.strip()
+            if isinstance(data, dict):
+                data.pop("generated_at", None)
+            return json.dumps(data, indent=2, sort_keys=True)
+
+        same = current.is_file() and _payload(current.read_text(encoding="utf-8")) == _payload(text)
+        if not same:
             print("[manifest] STALE — models/manifest.json does not match the repository state")
             return 1
         print("[manifest] up to date")

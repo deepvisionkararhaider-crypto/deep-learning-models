@@ -1,9 +1,27 @@
-name: Train models and publish artifacts
+name: Train and publish model artifacts
 
-# Manual, resumable training. Each CV model trains in its OWN matrix job so a
-# single failing model can no longer throw away every other model's work (the
-# previous single-job design ran verify_models.py *before* the commit step, so a
-# nonzero exit discarded all freshly trained checkpoints).
+# Manual, resumable training that publishes checkpoints to the Hugging Face Hub.
+#
+# Design notes
+# ------------
+# * Each CV model trains in its OWN matrix job, so one failing model can no longer
+#   throw away every other model's work (the previous single-job design ran
+#   verify_models.py *before* the commit step, so a nonzero exit discarded all
+#   freshly trained checkpoints).
+# * Checkpoints are NEVER committed to GitHub. They are uploaded to HF_MODEL_REPO
+#   by scripts/publish_models.py, which verifies the remote copy by downloading it
+#   into a clean directory and running inference with the production loader.
+# * Only small metadata (models/manifest.json + artifacts/status/*.json) is
+#   committed back to GitHub.
+#
+# Required repository configuration
+# ---------------------------------
+#   Secret   HF_TOKEN        fine-grained token with WRITE access to the model repo
+#   Variable HF_MODEL_REPO   e.g. KararDeepVision/deep-learning-models
+#
+# Setup: Settings -> Secrets and variables -> Actions.
+# Never paste a token into an issue, a commit, or this file.
+
 on:
   workflow_dispatch:
     inputs:
@@ -11,94 +29,151 @@ on:
         description: "Train the 20-model laboratory"
         required: true
         type: boolean
-        default: true
+        default: false
       train_cv:
         description: "Train medical + agriculture CV models"
         required: true
         type: boolean
         default: true
+      model_group:
+        description: "Which CV group to train"
+        required: true
+        type: choice
+        options: ["all", "medical", "agriculture", "single"]
+        default: "all"
+      model_id:
+        description: "Single model id (used when model_group=single)"
+        required: false
+        type: string
+        default: "brain_cnn"
       cv_epochs:
         description: "Epochs per CV model"
         required: true
         type: choice
         options: ["2", "3", "4"]
         default: "3"
+      batch_size:
+        description: "Batch size"
+        required: true
+        type: string
+        default: "8"
       include_heavy:
         description: "Also attempt Mask R-CNN (slow, needs several GB RAM)"
         required: true
         type: boolean
         default: false
-      defer:
-        description: "Comma-separated model ids to skip on purpose"
-        required: false
-        type: string
-        default: "brain_maskrcnn,plant_maskrcnn"
+      resume:
+        description: "Resume an interrupted run from artifacts/checkpoints/"
+        required: true
+        type: boolean
+        default: false
       publish:
-        description: "Commit + push verified artifacts back to main"
+        description: "Publish verified checkpoints to the Hugging Face Hub"
         required: true
         type: boolean
         default: true
+      verify_only:
+        description: "Skip training; only verify existing artifacts"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 concurrency:
-  group: model-training-${{ github.ref }}
+  group: model-training
   cancel-in-progress: false
 
-env:
-  PIP_DISABLE_PIP_VERSION_CHECK: "1"
-
 jobs:
-  # -------------------------------------------------------------------------
-  # 1. Fast gate: compile everything and run the unit tests before spending
-  #    any training minutes.
-  # -------------------------------------------------------------------------
+  # ------------------------------------------------------------------ #
+  # 1. validate the configuration before spending runner minutes
+  # ------------------------------------------------------------------ #
   validate:
-    name: Validate code and unit tests
+    name: Validate configuration
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
+    outputs:
+      models: ${{ steps.resolve.outputs.models }}
+      publishable: ${{ steps.resolve.outputs.publishable }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-train.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-train.txt pytest
+      - name: Compile
+        run: python -m compileall -q src scripts app.py tests
+      - name: Unit tests
+        run: pytest -q tests/
+      - name: App smoke test (inference-only guarantees)
+        run: python scripts/smoke_app.py
+      - name: Resolve the model list
+        id: resolve
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          sys.path.insert(0, ".")
+          from src.registry import BY_ID, CV_MODELS
+          group = "${{ inputs.model_group }}"
+          single = "${{ inputs.model_id }}"
+          if group == "single":
+              if single not in BY_ID:
+                  raise SystemExit(f"unknown model id: {single}")
+              models = [single]
+          elif group in ("medical", "agriculture"):
+              models = [m.id for m in CV_MODELS if m.area == group]
+          else:
+              models = [m.id for m in CV_MODELS if not m.is_blocked]
+          publishable = [m for m in models if not BY_ID[m].is_blocked]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write("models=" + json.dumps(models) + "\n")
+              fh.write("publishable=" + json.dumps(publishable) + "\n")
+          print("models:", models)
+          print("publishable:", publishable)
+          PY
+      - name: Warn about tracked oversized files
+        run: |
+          python - <<'PY'
+          import subprocess
+          out = subprocess.run(["git", "ls-files", "-z"], capture_output=True, text=True).stdout
+          from pathlib import Path
+          big = []
+          for f in filter(None, out.split("\0")):
+              p = Path(f)
+              if p.is_file() and p.stat().st_size >= 100 * 1024 * 1024:
+                  big.append((f, p.stat().st_size))
+          for f, s in big:
+              print(f"::warning file={f}::tracked file is {s/1e6:.1f} MB (GitHub limit 100 MB)")
+          if big:
+              raise SystemExit("Oversized tracked files must be moved to the Hugging Face Hub.")
+          print("no tracked file exceeds the GitHub 100 MB limit")
+          PY
+
+  # ------------------------------------------------------------------ #
+  # 2. train + publish one CV model per matrix job
+  # ------------------------------------------------------------------ #
+  train-cv:
+    name: train ${{ matrix.model }}
+    needs: validate
+    if: ${{ !inputs.verify_only && inputs.train_cv }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false          # one bad model must not cancel the others
+      max-parallel: 2           # stay inside the runner/concurrency budget
+      matrix:
+        model: ${{ fromJson(needs.validate.outputs.models) }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: |
-            requirements.txt
-            requirements-train.txt
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-train.txt
-          pip install pytest
-
-      - name: Compile all sources
-        run: python -m compileall -q src scripts app.py tests
-
-      - name: Run the unit test suite (no network, synthetic fixtures only)
-        run: pytest -q tests/
-
-      - name: Verify the committed artifacts (report only, never fails on missing)
-        run: python scripts/verify_models.py --require none
-
-  # -------------------------------------------------------------------------
-  # 2. The 20-model laboratory (single job; the datasets are small).
-  # -------------------------------------------------------------------------
-  train-lab:
-    name: Train laboratory models
-    needs: validate
-    if: ${{ inputs.train_lab }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 300
-    steps:
-      - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -111,200 +186,172 @@ jobs:
       - name: Record runner capacity
         run: |
           python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
-          free -h; df -h .
-      - name: Train lab models (reuses valid artifacts, resumes safely)
-        run: python scripts/train_lab.py --model all
-      - name: Upload lab artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifacts-lab
-          path: |
-            artifacts/lab/
-            artifacts/metadata/
-            artifacts/status/
-          if-no-files-found: warn
-          retention-days: 7
-
-  # -------------------------------------------------------------------------
-  # 3. Each CV model in its own matrix job: isolated failures, resumable,
-  #    no cross-model memory pressure, no unsafe concurrent writes.
-  # -------------------------------------------------------------------------
-  train-cv:
-    name: Train ${{ matrix.model }}
-    needs: validate
-    if: ${{ inputs.train_cv }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 340
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        model:
-          - brain_cnn
-          - brain_densenet
-          - brain_vit
-          - brain_unet
-          - brain_yolo
-          - plant_cnn
-          - plant_densenet
-          - plant_vit
-          - plant_unet
-          - plant_yolo
-          - brain_maskrcnn
-          - plant_maskrcnn
-    steps:
-      - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: requirements-train.txt
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-train.txt
-      - name: Record runner capacity
-        run: |
-          python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
-          free -h; df -h .
-      - name: Fetch only this model's dataset
+          free -h
+      - name: Fetch the dataset(s) this model needs
         run: |
           python - <<'PY'
-          import json, subprocess, sys
-          from pathlib import Path
+          import subprocess, sys
           sys.path.insert(0, ".")
           from src.registry import BY_ID
+          from scripts._fetch_data import DATASETS
           key = BY_ID["${{ matrix.model }}"].dataset_key
-          print(f"dataset_key for ${{ matrix.model }}: {key}", flush=True)
-          r = subprocess.run([sys.executable, "scripts/_fetch_data.py", key])
-          raise SystemExit(r.returncode)
+          if key in DATASETS:
+              sys.exit(subprocess.call([sys.executable, "scripts/_fetch_data.py", key]))
+          print(f"{key} needs no parquet download (bundled/lab dataset)")
           PY
-      - name: Train this model
+      - name: Train (skips a valid existing checkpoint; honours --resume)
         run: |
           EXTRA=""
           if [ "${{ inputs.include_heavy }}" = "true" ]; then EXTRA="--allow-heavy"; fi
+          if [ "${{ inputs.resume }}" = "true" ]; then EXTRA="$EXTRA --resume"; fi
           python scripts/train_models.py \
             --model ${{ matrix.model }} \
             --epochs ${{ inputs.cv_epochs }} \
-            --batch-size 8 \
-            --defer "${{ inputs.defer }}" \
+            --batch-size ${{ inputs.batch_size }} \
             $EXTRA
-      - name: Show this model's status record
-        if: always()
-        run: cat "artifacts/status/${{ matrix.model }}.json" || echo "no status record written"
-      - name: Upload this model's artifacts
+      - name: Publish this model to the Hugging Face Hub (12-step protocol)
+        if: ${{ inputs.publish }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_MODEL_REPO: ${{ vars.HF_MODEL_REPO }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::warning::HF_TOKEN secret is not set — skipping publish."
+            echo "Add it under Settings -> Secrets and variables -> Actions -> Secrets."
+            exit 0
+          fi
+          if [ -z "$HF_MODEL_REPO" ]; then
+            echo "::error::HF_MODEL_REPO variable is not set. Add it under Actions -> Variables."
+            exit 1
+          fi
+          python scripts/publish_models.py --model ${{ matrix.model }}
+      - name: Upload status + logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts-${{ matrix.model }}
+          name: status-${{ matrix.model }}
           path: |
-            artifacts/medical/
-            artifacts/agriculture/
-            artifacts/metadata/
             artifacts/status/
+            artifacts/metadata/
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 14
 
-  # -------------------------------------------------------------------------
-  # 4. Aggregate every model's output, verify, and only then publish.
-  # -------------------------------------------------------------------------
-  publish:
-    name: Verify and publish
-    needs: [validate, train-cv]
-    if: ${{ always() && inputs.train_cv }}
+  # ------------------------------------------------------------------ #
+  # 3. optional: the 20-model laboratory
+  # ------------------------------------------------------------------ #
+  train-lab:
+    name: Train the 20-model laboratory
+    needs: validate
+    if: ${{ !inputs.verify_only && inputs.train_lab }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
-        with: { ref: main, fetch-depth: 0 }
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: requirements-train.txt
-      - name: Install dependencies
-        run: |
+      - run: |
           python -m pip install --upgrade pip
           pip install -r requirements-train.txt
+      - name: Train laboratory models
+        run: python scripts/train_lab.py --model all
+      - name: Publish laboratory artifacts
+        if: ${{ inputs.publish }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_MODEL_REPO: ${{ vars.HF_MODEL_REPO }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::warning::HF_TOKEN not set — skipping publish."; exit 0
+          fi
+          python scripts/publish_models.py --all-ready
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: status-laboratory
+          path: artifacts/status/
+          if-no-files-found: warn
 
-      - name: Download all trained artifacts
+  # ------------------------------------------------------------------ #
+  # 4. aggregate, verify, rebuild the manifest, commit only small files
+  # ------------------------------------------------------------------ #
+  finalize:
+    name: Verify, rebuild the manifest, and commit metadata
+    needs: [validate, train-cv]
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-train.txt
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-train.txt
+      - name: Download every per-model status artifact
         uses: actions/download-artifact@v4
         with:
-          pattern: artifacts-*
-          path: _incoming
+          pattern: status-*
           merge-multiple: true
-
-      - name: Merge incoming artifacts into artifacts/
+          path: artifacts/
+      - name: Report artifact status (never fails merely for untrained models)
+        run: python scripts/verify_models.py --require none
+      - name: Fail only on real inference failures
         run: |
           python - <<'PY'
-          import shutil
-          from pathlib import Path
-          src = Path("_incoming")
-          if not src.exists():
-              print("no incoming artifacts"); raise SystemExit(0)
-          for area in ("medical", "agriculture", "lab", "metadata", "status"):
-              d = src / area
-              if not d.exists():
-                  continue
-              dst = Path("artifacts") / area
-              dst.mkdir(parents=True, exist_ok=True)
-              for f in d.rglob("*"):
-                  if f.is_file():
-                      shutil.copy2(f, dst / f.name)
-          print("merged artifact files:", sum(1 for _ in Path("artifacts").rglob("*") if _.is_file()))
+          import json, pathlib
+          p = pathlib.Path("artifacts/status/verify.json")
+          data = json.loads(p.read_text()) if p.exists() else {}
+          failed = data.get("infer_failed", [])
+          print("counts:", data.get("counts"))
+          if failed:
+              raise SystemExit(f"checkpoints fail inference: {failed}")
+          print("no inference failures")
           PY
-
-      - name: Verify every saved checkpoint (fresh load + inference)
-        id: verify
-        continue-on-error: true
-        run: python scripts/verify_models.py --require cv
-
-      - name: Check artifact sizes against the GitHub per-file limit
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          files = [p for p in Path("artifacts").rglob("*") if p.is_file()]
-          total = sum(p.stat().st_size for p in files)
-          print(f"{len(files)} artifact files, {total/1024/1024:.1f} MiB total")
-          big = [(str(p), p.stat().st_size) for p in files if p.stat().st_size >= 100*1024*1024]
-          if big:
-              for n, s in big:
-                  print(f"OVER GitHub 100MiB limit: {n} ({s/1024/1024:.1f} MiB)")
-              raise SystemExit("Oversized artifact: use Git LFS or external storage, then re-run.")
-          PY
-
-      - name: Show the training status summary
-        if: always()
-        run: cat artifacts/status/summary.json 2>/dev/null || echo "no summary.json"
-
-      - name: Commit and push verified artifacts
-        if: ${{ inputs.publish && steps.verify.outcome == 'success' }}
+      - name: Rebuild models/manifest.json from verified evidence
+        env:
+          HF_MODEL_REPO: ${{ vars.HF_MODEL_REPO }}
+        run: python scripts/build_manifest.py --remote
+      - name: Commit metadata only (never checkpoints)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f artifacts/
+          git add models/manifest.json artifacts/status artifacts/metadata
           if git diff --cached --quiet; then
-            echo "No artifact changes to publish."
-            exit 0
+            echo "No metadata changes to publish."; exit 0
           fi
-          git commit -m "Train and publish verified model artifacts [skip ci]"
+          git commit -m "chore(models): update manifest and status from training run [skip ci]"
           git push origin HEAD:main
-
-      - name: Upload logs + metadata (always, even on failure)
+      - name: Upload logs and reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: training-logs
+          name: training-reports
           path: |
             artifacts/status/
-            artifacts/metadata/
+            models/manifest.json
           if-no-files-found: warn
-          retention-days: 30
-
-      - name: Fail the job if verification failed
-        if: ${{ steps.verify.outcome != 'success' }}
+          retention-days: 14
+      - name: Final summary
+        if: always()
         run: |
-          echo "::error::Required-model verification failed; artifacts were NOT published."
-          exit 1
+          python - <<'PY'
+          import json, pathlib
+          p = pathlib.Path("models/manifest.json")
+          if not p.exists():
+              print("manifest not built"); raise SystemExit(0)
+          m = json.loads(p.read_text())
+          print(f"models={m['totals']['models']} ready={len(m['ready_models'])}")
+          print("status counts:", m["status_counts"])
+          print("ready:", ", ".join(m["ready_models"]) or "(none)")
+          PY

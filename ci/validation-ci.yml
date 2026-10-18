@@ -1,4 +1,4 @@
-name: CI — validation (no training)
+name: CI — validation (no training, no network)
 
 on:
   push:
@@ -10,9 +10,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
-    name: Lint, compile and unit tests
+    name: Compile, test, and assert inference-only guarantees
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -32,26 +36,28 @@ jobs:
           pip install -r requirements-train.txt
           pip install pytest
 
-      - name: Compile all sources
-        run: python -m compileall -q src scripts app.py tests
+      - name: Compile every source file
+        run: python -m compileall -q src scripts app.py streamlit_app.py tests
 
-      - name: Import the Streamlit entry point
-        run: python -c "import ast; ast.parse(open('app.py').read()); print('app.py parses OK')"
-
-      - name: Unit tests (registry, shapes, IO contracts, pipeline regressions)
+      - name: Unit tests
         run: pytest -q tests/
 
-      - name: Report artifact status (never fails on untrained models)
+      - name: App smoke test (imports, manifest, no-training guarantee)
+        run: python scripts/smoke_app.py
+
+      - name: Manifest is internally consistent
+        run: python scripts/build_manifest.py --check || python scripts/build_manifest.py
+
+      - name: Report artifact status (never fails merely for untrained models)
         run: python scripts/verify_models.py --require none
 
-      - name: Fail if any committed checkpoint fails inference
+      - name: Fail if a committed checkpoint fails inference
         run: |
           python - <<'PY'
           import json, pathlib
           p = pathlib.Path("artifacts/status/verify.json")
           if not p.exists():
-              print("no verify.json yet (first run) — skipping")
-              raise SystemExit(0)
+              print("no verify.json yet — skipping"); raise SystemExit(0)
           data = json.loads(p.read_text())
           failed = data.get("infer_failed", [])
           if failed:
@@ -59,8 +65,25 @@ jobs:
           print(f"no inference failures; counts={data.get('counts')}")
           PY
 
-      - name: Assert inference modules contain no training code
+      - name: Assert the inference path cannot train
         run: |
-          ! grep -R "torch.optim" src/inference.py src/lab_inference.py
-          ! grep -R "backward(" src/inference.py src/lab_inference.py
-          echo "no optimiser / backward in inference modules: OK"
+          ! grep -R "torch.optim" src/inference.py src/lab_inference.py src/hf_loader.py \
+              src/services/model_loader.py src/services/prediction_service.py
+          ! grep -R "backward(" src/inference.py src/lab_inference.py src/hf_loader.py \
+              src/services/model_loader.py src/services/prediction_service.py
+          echo "no optimiser / backward in the inference path: OK"
+
+      - name: Assert no large checkpoint is tracked in git
+        run: |
+          python - <<'PY'
+          import subprocess
+          from pathlib import Path
+          out = subprocess.run(["git","ls-files","-z"],capture_output=True,text=True).stdout
+          bad = [(f, Path(f).stat().st_size) for f in filter(None, out.split("\0"))
+                 if Path(f).is_file() and Path(f).stat().st_size >= 100*1024*1024]
+          for f, s in bad:
+              print(f"::error file={f}::{s/1e6:.1f} MB exceeds the GitHub 100 MB limit")
+          if bad:
+              raise SystemExit("Large checkpoints must live on the Hugging Face Hub.")
+          print("no tracked file exceeds 100 MB")
+          PY

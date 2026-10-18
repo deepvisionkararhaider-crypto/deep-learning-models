@@ -17,6 +17,6 @@
   "metrics": {},
   "duration_s": null,
   "verification": null,
-  "reason": "heavy detector (Mask R-CNN) not attempted; rerun with --allow-heavy (needs several GB RAM)",
+  "reason": "explicitly deferred via --defer",
   "status": "DEFERRED"
 }

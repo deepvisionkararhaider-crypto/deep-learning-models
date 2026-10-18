@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-14T19:21:33Z",
+  "generated_at": "2026-10-18T20:08:32Z",
   "python": "3.13.14",
   "torch": "2.6.0+cpu",
   "args": {
@@ -8,12 +8,13 @@
     "batch_size": 16,
     "lr": 0.001,
     "allow_heavy": false,
-    "require_heavy": true,
-    "defer": "",
+    "require_heavy": false,
+    "defer": "brain_maskrcnn",
     "force": false,
+    "resume": false,
     "list": false
   },
-  "peak_rss_mb": 207.7,
+  "peak_rss_mb": 499.0,
   "models": [
     {
       "model_id": "brain_maskrcnn",
@@ -34,7 +35,7 @@
       "metrics": {},
       "duration_s": null,
       "verification": null,
-      "reason": "heavy detector (Mask R-CNN) not attempted; rerun with --allow-heavy (needs several GB RAM)",
+      "reason": "explicitly deferred via --defer",
       "status": "DEFERRED"
     }
   ]
